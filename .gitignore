@@ -1,0 +1,8 @@
+# ignore images folder
+images/
+
+# ignore pyc files
+*.pyc
+*.pth
+*.kml
+*.kmz
