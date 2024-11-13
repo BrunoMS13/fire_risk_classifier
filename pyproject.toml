@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "fire-risk-classifier"
+version = "0.1.0"
+description = "A CNN for classifying house fire risks from images."
+authors = ["Bruno <bme.silva@campus.fct.unl.pt>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+requests = "^2.31.0"
+aiohttp = "^3.9.5"
+aiofiles = "^23.2.1"
+torch = {version = "*", source = "pytorch"}
+torchvision = {version = "*", source = "pytorch"}
+torchaudio = {version = "*", source = "pytorch"}
+matplotlib = "^3.9.0"
+pandas = "^2.2.2"
+scikit-learn = "^1.5.0"
+
+[[tool.poetry.source]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu118"
+priority = "secondary"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+train = "fire_risk_classifier.scripts.train_hydra:main"
+get_images = "fire_risk_classifier.scripts.get_images:main"
+decompress_images = "fire_risk_classifier.scripts.decompress_images:main"
+generate_dataset_csv = "fire_risk_classifier.scripts.create_test_and_train_csv:main"
