@@ -130,11 +130,15 @@ class Pipeline:
             )
             # Save checkpoint
             if epoch % 5 == 0:  # Save every 5 epochs, adjust as needed
-                checkpoint_path = os.path.join(
-                    self.params.directories["cnn_checkpoint_weights"],
-                    f"checkpoint_epoch_{epoch}.pth",
-                )
-                torch.save(model.state_dict(), checkpoint_path)
+                self.__save_checkpoint(model, epoch)
+
+    def __save_checkpoint(self, model: nn.Module, epoch: int):
+        os.makedirs(self.params.directories["cnn_checkpoint_weights"], exist_ok=True)
+        checkpoint_path = os.path.join(
+            self.params.directories["cnn_checkpoint_weights"],
+            f"checkpoint_epoch_{epoch}.pth",
+        )
+        torch.save(model.state_dict(), checkpoint_path)
 
 
 class ArgumentParser:
