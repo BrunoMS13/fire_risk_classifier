@@ -54,7 +54,10 @@ class Pipeline:
             annotations_file,
             image_directory,
         )
-        self.data_loader = DataLoader(self.dataset, batch_size=16, shuffle=True)
+        self.data_loader = DataLoader(
+            self.dataset, batch_size=self.params.batch_size_cnn, shuffle=True
+        )
+        print(f"Batch Size: {self.params.batch_size_cnn}")
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -62,17 +65,17 @@ class Pipeline:
         model = get_cnn_model(self.params).to(self.device)
         optimizer = optim.Adam(model.parameters(), lr=1e-4)
         criterion = nn.CrossEntropyLoss()
+        self.current_epoch = 0
 
-        def lr_lambda(epoch: int):
+        def lr_lambda(step: int):
             if self.params.lr_mode == "progressive_drops":
-                if epoch >= 0.75 * self.params.cnn_epochs:
-                    lr = 1e-6
-                elif epoch >= 0.15 * self.params.cnn_epochs:
-                    lr = 1e-5
+                if self.current_epoch == int(0.75 * self.params.cnn_epochs):
+                    scale_factor = 0.01
+                elif self.current_epoch == int(0.15 * self.params.cnn_epochs):
+                    scale_factor = 0.1
                 else:
-                    lr = 1e-4
-                # print("lr_scheduler1 - epoch: %d, lr: %f" % (epoch, lr))
-            return lr
+                    scale_factor = 1
+            return scale_factor
 
         scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
 
@@ -80,6 +83,7 @@ class Pipeline:
             model.load_state_dict(torch.load(self.params.model_weights))
 
         for epoch in range(self.params.cnn_epochs):
+            self.current_epoch = epoch
             self.training_step(epoch, model, optimizer, scheduler, criterion)
             torch.cuda.empty_cache()
 
@@ -111,15 +115,12 @@ class Pipeline:
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-
-            running_loss += loss.item()
-
-            _, predicted = torch.max(outputs.data, 1)
-            correct_predictions += (predicted == labels).sum().item()
-            total_samples += labels.size(0)
-
-            # Update learning rate based on scheduler
             scheduler.step()
+
+            with torch.no_grad():
+                _, predicted = torch.max(outputs.data, 1)
+                correct_predictions += (predicted == labels).sum().item()
+                total_samples += labels.size(0)
 
             print(
                 f"Epoch [{epoch + 1}/{self.params.cnn_epochs}], "
@@ -131,6 +132,8 @@ class Pipeline:
             # Save checkpoint
             if epoch % 5 == 0:  # Save every 5 epochs, adjust as needed
                 self.__save_checkpoint(model, epoch)
+
+        running_loss += loss.item()
 
     def __save_checkpoint(self, model: nn.Module, epoch: int):
         os.makedirs(self.params.directories["cnn_checkpoint_weights"], exist_ok=True)

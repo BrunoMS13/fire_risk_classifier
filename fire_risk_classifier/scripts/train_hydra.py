@@ -75,7 +75,7 @@ def main():
     parser.add_argument("--prepare", default="", type=str)
     parser.add_argument("--num_gpus", default=1, type=int)
     parser.add_argument("--num_epochs", default=12, type=int)
-    parser.add_argument("--batch_size", default=64, type=int)
+    parser.add_argument("--batch_size", default=8, type=int)
     parser.add_argument("--load_weights", default="", type=str)
     parser.add_argument("--fine_tunning", default="", type=str)
     parser.add_argument("--class_weights", default="", type=str)

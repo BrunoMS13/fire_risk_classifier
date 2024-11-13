@@ -9,7 +9,7 @@ class Params:
 
         self.lr_mode = "progressive_drops"
 
-        self.batch_size_cnn = 8
+        self.batch_size_cnn = 2
 
         self.batch_size_lstm = 512
         self.batch_size_eval = 128
