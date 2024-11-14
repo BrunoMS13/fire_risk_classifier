@@ -25,7 +25,7 @@ class HousePoint:
         self.latitude = float(latitude)
         self.altitude = float(altitude)
         self.longitude = float(longitude)
-        self.fire_risk = FireRisk.from_style_url(style_url)
+        self.fire_risk = FireRisk.from_style_url(style_url, name)
 
     def get_bbox(self, radius: int) -> BoundingBox:
         # Earth's radius in meters

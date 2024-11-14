@@ -1,4 +1,5 @@
 import os
+import logging
 import argparse
 from typing import Any
 
@@ -14,7 +15,7 @@ from fire_risk_classifier.data.image_dataset import CustomImageDataset
 
 
 class Pipeline:
-    def __init__(self, params: Params = None, args: dict = {}):
+    def __init__(self, params: Params = None, args: dict | None = None):
         """
         Initialize baseline class, prepare data, and calculate class weights.
         :param params: global parameters, used to find location of the dataset and json file
@@ -22,6 +23,8 @@ class Pipeline:
         """
         self.params = params
 
+        if args is None:
+            args = {}
         if args["train"]:
             self.params.train_cnn = True
         if args["path"]:
@@ -48,7 +51,7 @@ class Pipeline:
             self.params.class_weights = args["class_weights"]
 
         image_directory = "images/ortos2018-IRG-decompressed"
-        annotations_file = "output.csv"
+        annotations_file = "fire_risk_classifier/data/csvs/train.csv"
 
         self.dataset = CustomImageDataset(
             annotations_file,
@@ -57,11 +60,13 @@ class Pipeline:
         self.data_loader = DataLoader(
             self.dataset, batch_size=self.params.batch_size_cnn, shuffle=True
         )
-        print(f"Batch Size: {self.params.batch_size_cnn}")
-
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        logging.info(
+            f"Using device: {self.device} with {torch.cuda.device_count()} GPUs"
+        )
 
     def train_cnn(self):
+
         model = get_cnn_model(self.params).to(self.device)
         optimizer = optim.Adam(model.parameters(), lr=1e-4)
         criterion = nn.CrossEntropyLoss()
@@ -102,7 +107,7 @@ class Pipeline:
     ):
         model.train()
 
-        total_samples = 0
+        total_samples = 1
         running_loss = 0.0
         correct_predictions = 0
         total_steps = len(self.data_loader)
@@ -122,7 +127,7 @@ class Pipeline:
                 correct_predictions += (predicted == labels).sum().item()
                 total_samples += labels.size(0)
 
-            print(
+            logging.info(
                 f"Epoch [{epoch + 1}/{self.params.cnn_epochs}], "
                 f"Step [{step + 1}/{total_steps}], "
                 f"Loss: {running_loss / (step + 1):.4f}, "
@@ -139,7 +144,7 @@ class Pipeline:
         os.makedirs(self.params.directories["cnn_checkpoint_weights"], exist_ok=True)
         checkpoint_path = os.path.join(
             self.params.directories["cnn_checkpoint_weights"],
-            f"checkpoint_epoch_{epoch}.pth",
+            f"{self.params.algorithm}_checkpoint_epoch_{epoch}.pth",
         )
         torch.save(model.state_dict(), checkpoint_path)
 

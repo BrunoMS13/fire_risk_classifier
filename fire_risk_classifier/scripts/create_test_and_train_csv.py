@@ -21,10 +21,10 @@ def get_all_points() -> dict[str, HousePoint]:
 
     all_points = []
     for _, points in data.items():
-        for point in points:
-            all_points.append(
-                {"image_id": point.name, "fire_risk": point.fire_risk.value}
-            )
+        all_points.extend(
+            {"image_id": point.name, "fire_risk": point.fire_risk.value}
+            for point in points
+        )
     return all_points
 
 

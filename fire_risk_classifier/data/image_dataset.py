@@ -1,17 +1,11 @@
 import os
-import time
 import torch
 import numpy as np
 import pandas as pd
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
+from torch.utils.data import Dataset
 from matplotlib import pyplot as plt
 from torchvision.io import read_image
-import torchvision.datasets as datasets
 import torchvision.transforms as transforms
-from torch.utils.data import Dataset, DataLoader
-from sklearn.model_selection import train_test_split
 
 
 class CustomImageDataset(Dataset):
@@ -32,7 +26,7 @@ class CustomImageDataset(Dataset):
         self.target_transform = target_transform
         self.task = task.lower()
 
-        self.classes = [each_class for each_class in classes]
+        self.classes = list(classes)
         self.class2idx = {self.classes[i]: i for i in range(len(self.classes))}
         self.idx2class = {i: self.classes[i] for i in range(len(self.classes))}
 
@@ -40,6 +34,9 @@ class CustomImageDataset(Dataset):
         return len(self.img_labels)
 
     def __getitem__(self, idx: int):
+        print(
+            self.img_labels.iloc[idx, 0], self.class2idx[self.img_labels.iloc[idx, 1]]
+        )
         img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0] + ".png")
         image = read_image(img_path).float()
         if self.task == "classification":

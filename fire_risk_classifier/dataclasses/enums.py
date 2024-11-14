@@ -11,10 +11,9 @@ class FireRisk(Enum):
     UNKNOWN = 5
 
     @staticmethod
-    def from_style_url(style_url: str) -> "FireRisk":
-        match = re.search(r"msn_(\w+)-", style_url)
-        if match:
-            color_code = match.group(1).upper()
+    def from_style_url(style_url: str, name) -> "FireRisk":
+        if match := re.search(r"#m(?:sn)?_([a-z]+)-", style_url, re.IGNORECASE):
+            color_code = match[1].upper()
             # Map the extracted part to FireRisk levels.
             mapping = {
                 "BLU": FireRisk.LOW,
@@ -22,6 +21,8 @@ class FireRisk(Enum):
                 "YLW": FireRisk.HIGH,
                 "WHT": FireRisk.VERY_HIGH,
                 "RED": FireRisk.EXTREME,
+                "PURPLE": FireRisk.LOW,  # Weird edge case C61
+                "LTBLU": FireRisk.VERY_HIGH,  # Weird edge case A82
             }
             return mapping.get(color_code, FireRisk.UNKNOWN)
         return FireRisk.UNKNOWN

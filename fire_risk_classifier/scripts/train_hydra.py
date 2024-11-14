@@ -44,10 +44,12 @@ echo "TRAINING FINISHED"
 exit
 """
 
+import logging
 import argparse
 from typing import Any
 
 from fire_risk_classifier.pipeline import Pipeline
+from fire_risk_classifier.utils.logger import Logger
 from fire_risk_classifier.dataclasses.params import Params
 
 
@@ -67,6 +69,7 @@ class ArgumentParser:
 def main():
     default_params = Params()
     parser = ArgumentParser()
+    Logger.initialize_logger()
 
     parser.add_argument("--algorithm", default="", type=str)
     parser.add_argument("--train", default="", type=str)
@@ -87,6 +90,7 @@ def main():
     pipeline = Pipeline(default_params, parser.get_parser_dict())
     params = pipeline.params
 
+    logging.info("Starting model training...")
     if params.train_cnn:
         pipeline.train_cnn()
 

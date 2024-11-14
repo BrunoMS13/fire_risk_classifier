@@ -1,16 +1,12 @@
 import logging
 
-import torch
 import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader
-from torchvision import datasets, transforms, models
+from torchvision import models
 
 from fire_risk_classifier.dataclasses.params import Params
 
 
 def get_cnn_model(params: Params) -> nn.Module:
-    print(f"Using {params.algorithm} model.")
     if params.algorithm == "resnet":
         return get_resnet_model(params)
     if params.algorithm == "densenet":
@@ -19,12 +15,11 @@ def get_cnn_model(params: Params) -> nn.Module:
 
 
 def get_classifier_model(params: Params, num_features: int) -> "Classifier":
-    classifier = Classifier(
+    return Classifier(
         input_size=num_features,
         num_classes=params.num_labels,
         hidden_size=params.cnn_last_layer_length,
     )
-    return classifier
 
 
 def get_resnet_model(params: Params):

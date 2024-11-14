@@ -19,7 +19,6 @@ class KMLReader:
 
         ns = {"kml": "http://www.opengis.net/kml/2.2"}
         data = self.__create_data_dict()
-
         for placemark in root.findall(".//kml:Placemark", ns):
             name = self.__get_text_from_placemark(placemark, "kml:name", ns)
             point = self.__get_text_from_placemark(
@@ -34,10 +33,7 @@ class KMLReader:
         return data
 
     def __create_data_dict(self) -> dict[RegionsEnum, list[HousePoint]]:
-        data = {}
-        for _, value in RegionsEnum.__members__.items():
-            data[value.value] = []
-        return data
+        return {value.value: [] for _, value in RegionsEnum.__members__.items()}
 
     def __remove_integers_from_string(self, string: str) -> str:
         return "".join([char for char in string if not char.isdigit()])
