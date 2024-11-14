@@ -34,9 +34,6 @@ class CustomImageDataset(Dataset):
         return len(self.img_labels)
 
     def __getitem__(self, idx: int):
-        print(
-            self.img_labels.iloc[idx, 0], self.class2idx[self.img_labels.iloc[idx, 1]]
-        )
         img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0] + ".png")
         image = read_image(img_path).float()
         if self.task == "classification":
