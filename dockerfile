@@ -4,7 +4,7 @@ FROM python:3.11-slim
 # Set a working directory
 WORKDIR /app
 
-# Install necessary packages for Poetry and remove after installation
+# Install necessary packages for Poetry and clean up
 RUN apt-get update && \
     apt-get install -y curl && \
     curl -sSL https://install.python-poetry.org | python3 - && \
@@ -18,7 +18,7 @@ ENV PATH="/root/.local/bin:$PATH"
 ENV POETRY_VIRTUALENVS_IN_PROJECT=true
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Copy the project files
+# Copy the rest of the project files
 COPY . .
 
 # Install dependencies without development packages

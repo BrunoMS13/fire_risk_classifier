@@ -50,23 +50,17 @@ class Pipeline:
         if args["class_weights"]:
             self.params.class_weights = args["class_weights"]
 
-        image_directory = "images/ortos2018-IRG-decompressed"
-        annotations_file = "fire_risk_classifier/data/csvs/train.csv"
-
         self.dataset = CustomImageDataset(
-            annotations_file,
-            image_directory,
+            self.params.directories["annotations_file"],
+            self.params.directories["images_directory"],
         )
         self.data_loader = DataLoader(
             self.dataset, batch_size=self.params.batch_size_cnn, shuffle=True
         )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        logging.info(
-            f"Using device: {self.device} with {torch.cuda.device_count()} GPUs"
-        )
+        logging.info(f"Using device: {self.device}")
 
     def train_cnn(self):
-
         model = get_cnn_model(self.params).to(self.device)
         optimizer = optim.Adam(model.parameters(), lr=1e-4)
         criterion = nn.CrossEntropyLoss()
@@ -92,8 +86,12 @@ class Pipeline:
             self.training_step(epoch, model, optimizer, scheduler, criterion)
             torch.cuda.empty_cache()
 
+        logging.info(
+            f"Saving final model to {self.params.directories['cnn_checkpoint_weights']}"
+        )
         final_path = os.path.join(
-            self.params.directories["cnn_checkpoint_weights"], "final_model.pth"
+            self.params.directories["cnn_checkpoint_weights"],
+            f"{self.params.algorithm}_final_model.pth",
         )
         torch.save(model.state_dict(), final_path)
 
@@ -107,7 +105,7 @@ class Pipeline:
     ):
         model.train()
 
-        total_samples = 1
+        total_samples = 0
         running_loss = 0.0
         correct_predictions = 0
         total_steps = len(self.data_loader)
@@ -142,6 +140,7 @@ class Pipeline:
 
     def __save_checkpoint(self, model: nn.Module, epoch: int):
         os.makedirs(self.params.directories["cnn_checkpoint_weights"], exist_ok=True)
+        logging.info(f"Saving checkpoint for epoch {epoch}")
         checkpoint_path = os.path.join(
             self.params.directories["cnn_checkpoint_weights"],
             f"{self.params.algorithm}_checkpoint_epoch_{epoch}.pth",

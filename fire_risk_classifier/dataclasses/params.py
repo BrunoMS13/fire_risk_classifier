@@ -22,7 +22,7 @@ class Params:
 
         self.target_img_size = (224, 224)
 
-        self.image_format = "jpg"
+        self.image_format = "png"
 
         self.train_cnn = True
         self.generate_cnn_codes = False
@@ -50,5 +50,7 @@ class Params:
         self.lstm_loss = "categorical_crossentropy"
 
         self.directories = {
-            "cnn_checkpoint_weights": "fire_risk_classifier/data/cnn_checkpoint_weights"
+            "images_directory": "images/ortos2018-IRG-decompressed",
+            "annotations_file": "fire_risk_classifier/data/csvs/train.csv",
+            "cnn_checkpoint_weights": "fire_risk_classifier/data/cnn_checkpoint_weights",
         }

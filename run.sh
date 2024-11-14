@@ -1,5 +1,9 @@
-echo "Setting up docker image..."
+echo "Setting up docker image... (Version 1.0)"
 
-# Build and run the Docker container
+# Build the Docker image
 docker build -t fire_risk_classifier_image .
-docker run -it --rm fire_risk_classifier_image
+
+# Run the container, mounting the cnn_checkpoint_weights folder
+docker run -it --rm -v "$(pwd)/fire_risk_classifier/data/cnn_checkpoint_weights:/app/fire_risk_classifier/data/cnn_checkpoint_weights" fire_risk_classifier_image poetry run train --algorithm densenet --batch_size 32
+
+docker run -it --rm -v "$(pwd)/fire_risk_classifier/data/cnn_checkpoint_weights:/app/fire_risk_classifier/data/cnn_checkpoint_weights" fire_risk_classifier_image poetry run train --algorithm resnet --batch_size 32
