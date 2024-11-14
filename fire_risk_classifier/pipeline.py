@@ -135,7 +135,7 @@ class Pipeline:
                 f"LR: {scheduler.get_last_lr()[0]}"
             )
             # Save checkpoint
-            if epoch % 5 == 0:  # Save every 5 epochs, adjust as needed
+            if epoch % 5 == 0 and step == 0:
                 self.__save_checkpoint(model, epoch)
 
         running_loss += loss.item()
