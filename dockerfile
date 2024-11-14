@@ -16,6 +16,7 @@ ENV PATH="/root/.local/bin:$PATH"
 
 # Enable Poetry's virtual environment in the project directory
 ENV POETRY_VIRTUALENVS_IN_PROJECT=true
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy the project files
 COPY . .
