@@ -1,4 +1,4 @@
-echo "Setting up docker image... (Version 1.0)"
+echo "Setting up docker image... (Version 1.1)"
 
 # Build the Docker image
 docker build -t fire_risk_classifier_image .
