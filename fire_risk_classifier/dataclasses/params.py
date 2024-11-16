@@ -52,5 +52,6 @@ class Params:
         self.directories = {
             "images_directory": "images/ortos2018-IRG-decompressed",
             "annotations_file": "fire_risk_classifier/data/csvs/train.csv",
+            "testing_annotations_file": "fire_risk_classifier/data/csvs/test.csv",
             "cnn_checkpoint_weights": "fire_risk_classifier/data/cnn_checkpoint_weights",
         }

@@ -22,7 +22,7 @@ def get_classifier_model(params: Params, num_features: int) -> "Classifier":
     )
 
 
-def get_resnet_model(params: Params):
+def get_resnet_model(params: Params) -> models.ResNet:
     logging.info("Using ResNet50 model.")
     base_model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
     num_features = base_model.fc.in_features
@@ -35,7 +35,7 @@ def get_resnet_model(params: Params):
     return base_model
 
 
-def get_densenet_model(params: Params):
+def get_densenet_model(params: Params) -> models.DenseNet:
     logging.info("Using DenseNet161 model.")
     base_model = models.densenet161(pretrained=True)
     num_features = base_model.classifier.in_features

@@ -2,6 +2,7 @@ import os
 import torch
 import numpy as np
 import pandas as pd
+from PIL import Image
 from torch.utils.data import Dataset
 from matplotlib import pyplot as plt
 from torchvision.io import read_image
@@ -35,7 +36,7 @@ class CustomImageDataset(Dataset):
 
     def __getitem__(self, idx: int):
         img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0] + ".png")
-        image = read_image(img_path).float()
+        image = Image.open(img_path).convert("RGB")
         if self.task == "classification":
             label = self.class2idx[self.img_labels.iloc[idx, 1]]
         else:
@@ -57,8 +58,7 @@ class CustomImageDataset(Dataset):
         plt.show()
 
     def get_class_distribution(self):
-        class_dist = self.img_labels["fire_risk"].value_counts(ascending=True)
-        return class_dist
+        return self.img_labels["fire_risk"].value_counts(ascending=True)
 
     def get_class_weights(self):
         class_dist = self.get_class_distribution()
@@ -82,10 +82,7 @@ class CustomImageDataset(Dataset):
         return self.img_labels.iloc[idx, 1]
 
     def get_class_string_from_numeric_label(self, idxs: list[int]) -> list[str]:
-        out = []
-        for idx in idxs:
-            out.append(self.classes[idx])
-        return out
+        return [self.classes[idx] for idx in idxs]
 
 
 def imshow(img):

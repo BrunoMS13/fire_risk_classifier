@@ -27,7 +27,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-test = "fire_risk_classifier.scripts.test:main"
+test = "fire_risk_classifier.scripts.test_hydra:main"
 train = "fire_risk_classifier.scripts.train_hydra:main"
 get_images = "fire_risk_classifier.scripts.get_images:main"
 decompress_images = "fire_risk_classifier.scripts.decompress_images:main"
