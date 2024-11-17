@@ -24,7 +24,7 @@ class Params:
 
         self.image_format = "png"
 
-        self.train_cnn = True
+        self.train_cnn = False
         self.generate_cnn_codes = False
         self.train_lstm = False
         self.test_cnn = False

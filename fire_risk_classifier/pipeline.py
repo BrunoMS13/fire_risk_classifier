@@ -77,16 +77,23 @@ class Pipeline:
                 transform=transform,
             )
             self.data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-            return
 
-        # Testing data loader
-        test_dataset = CustomImageDataset(
-            directories["testing_annotations_file"],
-            directories["images_directory"],
-        )
-        self.test_data_loader = DataLoader(
-            test_dataset, batch_size=batch_size, shuffle=True
-        )
+        if self.params.test_cnn:
+            transform = transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                ]
+            )
+            # Testing data loader
+            test_dataset = CustomImageDataset(
+                directories["testing_annotations_file"],
+                directories["images_directory"],
+                transform=transform,
+            )
+            self.test_data_loader = DataLoader(
+                test_dataset, batch_size=batch_size, shuffle=True
+            )
 
     def train_cnn(self):
         model = get_cnn_model(self.params).to(self.device)
@@ -104,7 +111,20 @@ class Pipeline:
                     scale_factor = 1
             return scale_factor
 
-        scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
+        def lr_lambda_for_fine_tuning(step: int):
+            if self.params.lr_mode == "progressive_drops":
+                if self.current_epoch >= int(0.75 * self.params.cnn_epochs):
+                    scale_factor = 0.01
+                elif self.current_epoch >= int(0.15 * self.params.cnn_epochs):
+                    scale_factor = 0.1
+                else:
+                    scale_factor = 1
+            return scale_factor
+
+        if self.params.fine_tunning:
+            scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda_for_fine_tuning)
+        else:
+            scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
 
         if self.params.model_weights:
             model.load_state_dict(torch.load(self.params.model_weights))
@@ -119,7 +139,7 @@ class Pipeline:
         )
         final_path = os.path.join(
             self.params.directories["cnn_checkpoint_weights"],
-            f"{self.params.algorithm}_final_model.pth",
+            f"{self.params.algorithm}_final_model_V2.pth",
         )
         torch.save(model.state_dict(), final_path)
 
@@ -163,7 +183,8 @@ class Pipeline:
                 f"LR: {scheduler.get_last_lr()[0]}"
             )
             # Save checkpoint
-            if epoch % 5 == 0 and step == 0:
+            # if epoch % 5 == 0 and step == 0:
+            if epoch == 0 and step == 0:
                 self.__save_checkpoint(model, epoch)
 
     def test_cnn(self):
@@ -216,6 +237,6 @@ class Pipeline:
         logging.info(f"Saving checkpoint for epoch {epoch}")
         checkpoint_path = os.path.join(
             self.params.directories["cnn_checkpoint_weights"],
-            f"{self.params.algorithm}_checkpoint_epoch_{epoch}.pth",
+            f"{self.params.algorithm}_test_checkpoint_epoch_{epoch}.pth",
         )
         torch.save(model.state_dict(), checkpoint_path)
