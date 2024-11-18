@@ -196,8 +196,8 @@ class Pipeline:
             )
             # Save checkpoint
             # if epoch % 5 == 0 and step == 0:
-            if epoch == 0 and step == 0:
-                self.__save_checkpoint(model, epoch)
+            # if epoch == 0 and step == 0:
+            #    self.__save_checkpoint(model, epoch)
 
     def test_cnn(self):
         model = get_cnn_model(self.params).to(self.device)
