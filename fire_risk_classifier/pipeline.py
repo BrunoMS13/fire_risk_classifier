@@ -10,6 +10,11 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import LambdaLR
 
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix
+
 from fire_risk_classifier.dataclasses.params import Params
 from fire_risk_classifier.classifier.cnn import get_cnn_model
 from fire_risk_classifier.data.image_dataset import CustomImageDataset
@@ -71,12 +76,14 @@ class Pipeline:
             )
 
             # Training data loader
-            dataset = CustomImageDataset(
+            self.dataset = CustomImageDataset(
                 directories["annotations_file"],
                 directories["images_directory"],
                 transform=transform,
             )
-            self.data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+            self.data_loader = DataLoader(
+                self.dataset, batch_size=batch_size, shuffle=True
+            )
 
         if self.params.test_cnn:
             transform = transforms.Compose(
@@ -86,19 +93,24 @@ class Pipeline:
                 ]
             )
             # Testing data loader
-            test_dataset = CustomImageDataset(
+            self.test_dataset = CustomImageDataset(
                 directories["testing_annotations_file"],
                 directories["images_directory"],
                 transform=transform,
             )
             self.test_data_loader = DataLoader(
-                test_dataset, batch_size=batch_size, shuffle=True
+                self.test_dataset, batch_size=batch_size, shuffle=True
             )
 
     def train_cnn(self):
         model = get_cnn_model(self.params).to(self.device)
         optimizer = optim.Adam(model.parameters(), lr=1e-4)
         criterion = nn.CrossEntropyLoss()
+
+        if self.params.class_weights:
+            class_weights = self.dataset.get_class_weights_tensor().to(self.device)
+            criterion.weight = class_weights
+
         self.current_epoch = 0
 
         def lr_lambda(step: int):
@@ -139,7 +151,7 @@ class Pipeline:
         )
         final_path = os.path.join(
             self.params.directories["cnn_checkpoint_weights"],
-            f"{self.params.algorithm}_final_model_V2.pth",
+            f"{self.params.algorithm}_final_model_V3.pth",
         )
         torch.save(model.state_dict(), final_path)
 
@@ -193,17 +205,15 @@ class Pipeline:
         criterion = nn.CrossEntropyLoss()
 
         # Load saved model weights
-        if self.params.model_weights:
-            path = os.path.join(
-                self.params.directories["cnn_checkpoint_weights"],
-                self.params.model_weights,
-            )
-            model.load_state_dict(torch.load(path))
-            logging.info(f"Loaded model weights from {self.params.model_weights}")
+        self.__load_model_weights(model)
 
         total_samples = 0
         total_loss = 0.0
         correct_predictions = 0
+
+        # Initialize containers for labels and predictions
+        all_labels = []
+        all_predictions = []
 
         with torch.no_grad():  # Disable gradient computation for testing
             for step, (images, labels) in enumerate(
@@ -219,6 +229,10 @@ class Pipeline:
                 correct_predictions += (predicted == labels).sum().item()
                 total_samples += labels.size(0)
 
+                # Append for confusion matrix
+                all_labels.extend(labels.cpu().numpy())
+                all_predictions.extend(predicted.cpu().numpy())
+
                 if step % 10 == 0:
                     logging.info(
                         f"Test Step [{step + 1}/{len(self.test_data_loader)}], "
@@ -231,6 +245,34 @@ class Pipeline:
 
         logging.info(f"Final Test Loss: {final_loss:.4f}")
         logging.info(f"Final Test Accuracy: {final_accuracy:.2f}%")
+
+        self.__plot_confusion_matrix(all_labels, all_predictions)
+
+    def __load_model_weights(self, model: nn.Module):
+        if not self.params.model_weights:
+            return
+        path = os.path.join(
+            self.params.directories["cnn_checkpoint_weights"],
+            self.params.model_weights,
+        )
+        model.load_state_dict(torch.load(path))
+        logging.info(f"Loaded model weights from {self.params.model_weights}")
+
+    def __plot_confusion_matrix(self, all_labels: list, all_predictions: list):
+        cm = confusion_matrix(all_labels, all_predictions)
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(
+            cm,
+            annot=True,
+            fmt="d",
+            cmap="Blues",
+            xticklabels=self.params.class_names,
+            yticklabels=self.params.class_names,
+        )
+        plt.xlabel("Predicted Labels")
+        plt.ylabel("True Labels")
+        plt.title("Confusion Matrix")
+        plt.show()
 
     def __save_checkpoint(self, model: nn.Module, epoch: int):
         os.makedirs(self.params.directories["cnn_checkpoint_weights"], exist_ok=True)

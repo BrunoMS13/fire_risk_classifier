@@ -16,6 +16,7 @@ torchaudio = {version = "*", source = "pytorch"}
 matplotlib = "^3.9.0"
 pandas = "^2.2.2"
 scikit-learn = "^1.5.0"
+seaborn = "^0.13.0"
 
 [[tool.poetry.source]]
 name = "pytorch"
@@ -32,3 +33,4 @@ train = "fire_risk_classifier.scripts.train_hydra:main"
 get_images = "fire_risk_classifier.scripts.get_images:main"
 decompress_images = "fire_risk_classifier.scripts.decompress_images:main"
 generate_dataset_csv = "fire_risk_classifier.scripts.create_test_and_train_csv:main"
+create_images_to_balance = "fire_risk_classifier.scripts.create_images_to_balance:main"

@@ -55,3 +55,5 @@ class Params:
             "testing_annotations_file": "fire_risk_classifier/data/csvs/test.csv",
             "cnn_checkpoint_weights": "fire_risk_classifier/data/cnn_checkpoint_weights",
         }
+
+        self.class_names = ["low", "medium", "high", "very_high", "extreme"]
