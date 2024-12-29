@@ -124,9 +124,14 @@ class Pipeline:
         )
         final_path = os.path.join(
             self.params.directories["cnn_checkpoint_weights"],
-            f"{self.params.algorithm}_final_model.pth",
+            self.__create_model_name(),
         )
         torch.save(model.state_dict(), final_path)
+
+    def __create_model_name(self) -> str:
+        fine_tunned = "FT" if self.params.fine_tunning else "NFT"
+        class_weights = "CW" if self.params.class_weights else "NCW"
+        return f"{self.params.algorithm}_{class_weights}_{fine_tunned}_final_model.pth"
 
     def __training_step(
         self,
@@ -232,7 +237,7 @@ class Pipeline:
         logging.info(f"Loaded model weights from {self.params.model_weights}")
 
     def __get_scheduler(self, optimizer: optim.Optimizer) -> LambdaLR:
-        def lr_lambda(step: int):
+        def lr_lambda(step: int) -> float:
             if self.params.lr_mode == "progressive_drops":
                 if self.current_epoch >= int(0.75 * self.params.cnn_epochs):
                     scale_factor = 0.01
@@ -242,7 +247,7 @@ class Pipeline:
                     scale_factor = 1
             return scale_factor
 
-        def lr_lambda_for_fine_tuning(step: int):
+        def lr_lambda_for_fine_tuning(step: int) -> float:
             if self.params.lr_mode == "progressive_drops":
                 if self.current_epoch >= int(0.75 * self.params.cnn_epochs):
                     scale_factor = 0.01
@@ -253,10 +258,8 @@ class Pipeline:
             return scale_factor
 
         if self.params.fine_tunning:
-            scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda_for_fine_tuning)
-        else:
-            scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
-        return scheduler
+            return LambdaLR(optimizer, lr_lambda=lr_lambda_for_fine_tuning)
+        return LambdaLR(optimizer, lr_lambda=lr_lambda)
 
     def __get_criterion(self) -> nn.Module:
         criterion = nn.CrossEntropyLoss()
