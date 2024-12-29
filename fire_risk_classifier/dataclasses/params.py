@@ -9,12 +9,12 @@ class Params:
 
         self.lr_mode = "progressive_drops"
 
-        self.batch_size_cnn = 2
+        self.batch_size_cnn = 32
 
         self.batch_size_lstm = 512
         self.batch_size_eval = 128
         self.metadata_length = 45
-        self.num_labels = 5
+        self.num_labels = 2
         self.cnn_last_layer_length = 4096
         self.cnn_lstm_layer_length = 2208
 
@@ -34,7 +34,7 @@ class Params:
         self.prefix = ""
         self.model_weights = ""
         self.database = ""
-        self.class_weights = "no_weights"
+        self.class_weights = ""
         self.generator = "flip"
 
         self.fine_tunning = False
@@ -52,8 +52,8 @@ class Params:
         self.directories = {
             "annotations_file": "fire_risk_classifier/data/csvs/train.csv",
             "testing_annotations_file": "fire_risk_classifier/data/csvs/test.csv",
-            "images_directory": "fire_risk_classifier/data/images/ortos2018-IRG-62_5m",
             "cnn_checkpoint_weights": "fire_risk_classifier/data/cnn_checkpoint_weights",
+            "images_directory": "fire_risk_classifier/data/images/ortos2018-IRG-62_5m-decompressed",
         }
 
         # self.class_names = ["low", "medium", "high", "very_high", "extreme"]

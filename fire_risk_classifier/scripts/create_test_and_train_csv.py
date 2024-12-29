@@ -42,10 +42,10 @@ def write_csv(data: list[dict[str, Any]], output_file: str):
         risk = d["fire_risk"]
 
         if risk in medium_risks:
-            print(f"Risk of {risk} is medium")
+            # print(f"Risk of {risk} is medium")
             updated_data.append({"image_id": d["image_id"], "fire_risk": 0})
             continue
-        print(f"Risk of {risk} is extreme")
+        # print(f"Risk of {risk} is extreme")
         risk = 1
         updated_data.append({"image_id": d["image_id"], "fire_risk": 1})
 

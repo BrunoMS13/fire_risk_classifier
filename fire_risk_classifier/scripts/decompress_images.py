@@ -29,5 +29,5 @@ def decompress_images(input_directory: str):
 
 
 def main():
-    image_directory = "fire_risk_classifier/data/images/ortos2018-IRG"
+    image_directory = "fire_risk_classifier/data/images/ortos2018-IRG-62_5m"
     decompress_images(image_directory)

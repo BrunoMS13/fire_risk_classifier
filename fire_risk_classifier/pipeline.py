@@ -106,46 +106,17 @@ class Pipeline:
     def train_cnn(self):
         model = get_cnn_model(self.params).to(self.device)
         optimizer = optim.Adam(model.parameters(), lr=1e-4)
-        criterion = nn.CrossEntropyLoss()
-
-        if self.params.class_weights:
-            class_weights = self.dataset.get_class_weights_tensor().to(self.device)
-            logging.info(f"Using class weights: {class_weights}")
-            criterion.weight = class_weights
-
         self.current_epoch = 0
 
-        def lr_lambda(step: int):
-            if self.params.lr_mode == "progressive_drops":
-                if self.current_epoch >= int(0.75 * self.params.cnn_epochs):
-                    scale_factor = 0.01
-                elif self.current_epoch >= int(0.45 * self.params.cnn_epochs):
-                    scale_factor = 0.1
-                else:
-                    scale_factor = 1
-            return scale_factor
-
-        def lr_lambda_for_fine_tuning(step: int):
-            if self.params.lr_mode == "progressive_drops":
-                if self.current_epoch >= int(0.75 * self.params.cnn_epochs):
-                    scale_factor = 0.01
-                elif self.current_epoch >= int(0.15 * self.params.cnn_epochs):
-                    scale_factor = 0.1
-                else:
-                    scale_factor = 1
-            return scale_factor
-
-        if self.params.fine_tunning:
-            scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda_for_fine_tuning)
-        else:
-            scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
+        criterion = self.__get_criterion()
+        scheduler = self.__get_scheduler(optimizer)
 
         if self.params.model_weights:
             model.load_state_dict(torch.load(self.params.model_weights))
 
         for epoch in range(self.params.cnn_epochs):
             self.current_epoch = epoch
-            self.training_step(epoch, model, optimizer, scheduler, criterion)
+            self.__training_step(epoch, model, optimizer, scheduler, criterion)
             torch.cuda.empty_cache()
 
         logging.info(
@@ -157,7 +128,7 @@ class Pipeline:
         )
         torch.save(model.state_dict(), final_path)
 
-    def training_step(
+    def __training_step(
         self,
         epoch: int,
         model: nn.Module,
@@ -259,6 +230,41 @@ class Pipeline:
         )
         model.load_state_dict(torch.load(path))
         logging.info(f"Loaded model weights from {self.params.model_weights}")
+
+    def __get_scheduler(self, optimizer: optim.Optimizer) -> LambdaLR:
+        def lr_lambda(step: int):
+            if self.params.lr_mode == "progressive_drops":
+                if self.current_epoch >= int(0.75 * self.params.cnn_epochs):
+                    scale_factor = 0.01
+                elif self.current_epoch >= int(0.45 * self.params.cnn_epochs):
+                    scale_factor = 0.1
+                else:
+                    scale_factor = 1
+            return scale_factor
+
+        def lr_lambda_for_fine_tuning(step: int):
+            if self.params.lr_mode == "progressive_drops":
+                if self.current_epoch >= int(0.75 * self.params.cnn_epochs):
+                    scale_factor = 0.01
+                elif self.current_epoch >= int(0.15 * self.params.cnn_epochs):
+                    scale_factor = 0.1
+                else:
+                    scale_factor = 1
+            return scale_factor
+
+        if self.params.fine_tunning:
+            scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda_for_fine_tuning)
+        else:
+            scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
+        return scheduler
+
+    def __get_criterion(self) -> nn.Module:
+        criterion = nn.CrossEntropyLoss()
+        if self.params.class_weights:
+            class_weights = self.dataset.get_class_weights_tensor().to(self.device)
+            logging.info(f"Using class weights: {class_weights}")
+            criterion.weight = class_weights
+        return criterion
 
     def __plot_confusion_matrix(self, all_labels: list, all_predictions: list):
         cm = confusion_matrix(all_labels, all_predictions)
