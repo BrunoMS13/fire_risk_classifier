@@ -10,7 +10,7 @@ class KMLReader:
     def __init__(self, kml_file: str | None):
         self.kml_file = kml_file
 
-    def get_kml_data(self) -> dict[str, HousePoint]:
+    def get_kml_data(self) -> dict[str, list[HousePoint]]:
         logging.info(f"Reading KML file: {self.kml_file}")
         if not self.kml_file:
             raise Exception("KML file is None.")

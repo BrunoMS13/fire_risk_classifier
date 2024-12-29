@@ -21,6 +21,9 @@ class BoundingBox:
             )
         )
 
+    def __str__(self):
+        return f"{self.min_latitude},{self.min_longitude},{self.max_latitude},{self.max_longitude}"
+
     def get_distance(lat1: int, lon1: int, lat2: int, lon2: int) -> float:
         """Distance between two points on Earth's surface using the Haversine formula."""
         R = 6371  # Earth radius in kilometers

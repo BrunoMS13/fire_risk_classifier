@@ -70,6 +70,7 @@ class Pipeline:
                 [
                     transforms.RandomHorizontalFlip(),
                     transforms.RandomVerticalFlip(),
+                    transforms.RandomRotation(20),
                     transforms.ToTensor(),
                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
                 ]
@@ -109,6 +110,7 @@ class Pipeline:
 
         if self.params.class_weights:
             class_weights = self.dataset.get_class_weights_tensor().to(self.device)
+            logging.info(f"Using class weights: {class_weights}")
             criterion.weight = class_weights
 
         self.current_epoch = 0
@@ -151,7 +153,7 @@ class Pipeline:
         )
         final_path = os.path.join(
             self.params.directories["cnn_checkpoint_weights"],
-            f"{self.params.algorithm}_final_model_V3.pth",
+            f"{self.params.algorithm}_final_model.pth",
         )
         torch.save(model.state_dict(), final_path)
 

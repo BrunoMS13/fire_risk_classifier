@@ -4,3 +4,4 @@ __pycache__
 *.pyo
 tests
 docs
+fire_risk_classifier/data/cnn_checkpoint_weights

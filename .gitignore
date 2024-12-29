@@ -1,5 +1,7 @@
 # ignore images folder
 images/
+fire_risk_classifier/data/csvs/house_points_bb50m.csv
+fire_risk_classifier/data/csvs/house_points_bb62_5m.csv
 
 # ignore pyc files
 *.pyc

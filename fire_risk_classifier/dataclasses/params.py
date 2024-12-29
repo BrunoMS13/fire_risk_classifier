@@ -50,10 +50,11 @@ class Params:
         self.lstm_loss = "categorical_crossentropy"
 
         self.directories = {
-            "images_directory": "images/ortos2018-IRG-decompressed",
             "annotations_file": "fire_risk_classifier/data/csvs/train.csv",
             "testing_annotations_file": "fire_risk_classifier/data/csvs/test.csv",
+            "images_directory": "fire_risk_classifier/data/images/ortos2018-IRG-62_5m",
             "cnn_checkpoint_weights": "fire_risk_classifier/data/cnn_checkpoint_weights",
         }
 
-        self.class_names = ["low", "medium", "high", "very_high", "extreme"]
+        # self.class_names = ["low", "medium", "high", "very_high", "extreme"]
+        self.class_names = ["medium", "extreme"]

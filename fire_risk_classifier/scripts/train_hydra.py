@@ -88,11 +88,9 @@ def main():
     parser.add_argument("--path", default="", type=str)
 
     pipeline = Pipeline(default_params, parser.get_parser_dict())
-    params = pipeline.params
 
     logging.info("Starting model training...")
-    if params.train_cnn:
-        pipeline.train_cnn()
+    pipeline.train_cnn()
 
 
 if __name__ == "__main__":
