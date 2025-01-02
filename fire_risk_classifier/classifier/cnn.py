@@ -6,6 +6,7 @@ from torchvision import models
 from fire_risk_classifier.dataclasses.params import Params
 
 
+# t
 def get_cnn_model(params: Params) -> nn.Module:
     if params.algorithm == "resnet":
         return get_resnet_model(params)
