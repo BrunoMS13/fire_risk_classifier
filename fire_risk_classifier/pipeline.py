@@ -39,8 +39,6 @@ class Pipeline:
             prepare_data(params)"""
         if args["algorithm"]:
             self.params.algorithm = args["algorithm"]
-        if args["nm"]:
-            self.params.use_metadata = False
         if args["test"]:
             self.params.test_cnn = True
         if args["num_gpus"]:
@@ -240,22 +238,22 @@ class Pipeline:
         def lr_lambda(step: int) -> float:
             if self.params.lr_mode == "progressive_drops":
                 if self.current_epoch >= int(0.75 * self.params.cnn_epochs):
-                    scale_factor = 0.01
-                elif self.current_epoch >= int(0.45 * self.params.cnn_epochs):
-                    scale_factor = 0.1
-                else:
-                    scale_factor = 1
-            return scale_factor
+                    return 0.01
+                return (
+                    0.1
+                    if self.current_epoch >= int(0.45 * self.params.cnn_epochs)
+                    else 1
+                )
 
         def lr_lambda_for_fine_tuning(step: int) -> float:
             if self.params.lr_mode == "progressive_drops":
                 if self.current_epoch >= int(0.75 * self.params.cnn_epochs):
-                    scale_factor = 0.01
-                elif self.current_epoch >= int(0.15 * self.params.cnn_epochs):
-                    scale_factor = 0.1
-                else:
-                    scale_factor = 1
-            return scale_factor
+                    return 0.01
+                return (
+                    0.1
+                    if self.current_epoch >= int(0.15 * self.params.cnn_epochs)
+                    else 1
+                )
 
         if self.params.fine_tunning:
             return LambdaLR(optimizer, lr_lambda=lr_lambda_for_fine_tuning)
