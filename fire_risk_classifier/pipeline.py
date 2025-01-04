@@ -175,7 +175,7 @@ class Pipeline:
             # if epoch == 0 and step == 0:
             #    self.__save_checkpoint(model, epoch)
 
-    def test_cnn(self):
+    def test_cnn(self, plot_confusion_matrix: bool = True) -> list[int]:
         model = get_cnn_model(self.params).to(self.device)
         model.eval()
         criterion = nn.CrossEntropyLoss()
@@ -222,7 +222,9 @@ class Pipeline:
         logging.info(f"Final Test Loss: {final_loss:.4f}")
         logging.info(f"Final Test Accuracy: {final_accuracy:.2f}%")
 
-        self.__plot_confusion_matrix(all_labels, all_predictions)
+        if plot_confusion_matrix:
+            self.__plot_confusion_matrix(all_labels, all_predictions)
+        return all_labels, all_predictions
 
     def __load_model_weights(self, model: nn.Module):
         if not self.params.model_weights:
