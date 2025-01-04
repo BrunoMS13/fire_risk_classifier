@@ -8,4 +8,3 @@ docker run -it --rm -v "$(pwd)/fire_risk_classifier/data/cnn_checkpoint_weights:
 
 docker run -it --rm -v "$(pwd)/fire_risk_classifier/data/cnn_checkpoint_weights:/app/fire_risk_classifier/data/cnn_checkpoint_weights" fire_risk_classifier_image poetry run train --algorithm resnet --batch_size 64 --train True
 
-mv tmp/fire_risk_classifier/data/cnn_checkpoint_weights/* ~/fire_risk_classifier/rgb_models

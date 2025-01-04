@@ -103,19 +103,21 @@ class Pipeline:
 
     def train_cnn(self):
         model = get_cnn_model(self.params).to(self.device)
-        optimizer = optim.Adam(model.parameters(), lr=1e-4)
-        self.current_epoch = 0
 
-        criterion = self.__get_criterion()
-        scheduler = self.__get_scheduler(optimizer)
+        if False:
+            optimizer = optim.Adam(model.parameters(), lr=1e-4)
+            self.current_epoch = 0
 
-        if self.params.model_weights:
-            model.load_state_dict(torch.load(self.params.model_weights))
+            criterion = self.__get_criterion()
+            scheduler = self.__get_scheduler(optimizer)
 
-        for epoch in range(self.params.cnn_epochs):
-            self.current_epoch = epoch
-            self.__training_step(epoch, model, optimizer, scheduler, criterion)
-            torch.cuda.empty_cache()
+            if self.params.model_weights:
+                model.load_state_dict(torch.load(self.params.model_weights))
+
+            for epoch in range(self.params.cnn_epochs):
+                self.current_epoch = epoch
+                self.__training_step(epoch, model, optimizer, scheduler, criterion)
+                torch.cuda.empty_cache()
 
         logging.info(
             f"Saving final model to {self.params.directories['cnn_checkpoint_weights']}"
