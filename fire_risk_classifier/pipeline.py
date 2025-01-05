@@ -109,9 +109,8 @@ class Pipeline:
         criterion = self.__get_criterion()
         scheduler = self.__get_scheduler(optimizer)
 
-        if self.params.model_weights:
-            logging.info(f"Loading model weights from {self.params.model_weights}")
-            model.load_state_dict(torch.load(self.params.model_weights))
+        # Load saved model weights
+        self.__load_model_weights(model)
 
         for epoch in range(self.params.cnn_epochs):
             self.current_epoch = epoch
