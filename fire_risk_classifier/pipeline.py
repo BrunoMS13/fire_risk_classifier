@@ -127,7 +127,7 @@ class Pipeline:
         torch.save(model.state_dict(), final_path)
 
     def __create_model_name(self) -> str:
-        return f"{self.params.algorithm}_body_2C.pth"
+        # return f"{self.params.algorithm}_body_2C.pth"
         fine_tunned = "FT" if self.params.fine_tunning else "NFT"
         class_weights = "CW" if self.params.class_weights else "NCW"
         return f"{self.params.algorithm}_{class_weights}_{fine_tunned}_final_model.pth"
