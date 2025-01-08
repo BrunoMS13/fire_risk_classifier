@@ -151,10 +151,14 @@ class Pipeline:
         torch.save(model.state_dict(), final_path)
 
     def __create_model_name(self) -> str:
-        # return f"{self.params.algorithm}_body_2C.pth"
+        if self.__is_body():
+            return f"{self.params.algorithm}_body_2C.pth"
         fine_tunned = "FT" if self.params.fine_tunning else "NFT"
         class_weights = "CW" if self.params.class_weights else "NCW"
         return f"{self.params.algorithm}_{class_weights}_{fine_tunned}_final_model.pth"
+
+    def __is_body(self) -> bool:
+        return self.params.cnn_epochs == 12
 
     def __training_step(
         self,
