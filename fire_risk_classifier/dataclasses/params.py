@@ -51,10 +51,10 @@ class Params:
         self.calculate_ndvi_index = False
 
         self.directories = {
-            "annotations_file": "fire_risk_classifier/fire_risk_classifier/data/csvs/train.csv",
+            "annotations_file": "fire_risk_classifier/data/csvs/train.csv",
             "testing_annotations_file": "fire_risk_classifier/data/csvs/test.csv",
             "cnn_checkpoint_weights": "fire_risk_classifier/data/cnn_checkpoint_weights/IRG_2C/",
-            "images_directory": "fire_risk_classifier/fire_risk_classifier/data/images/ortos2018-IRG-62_5m-decompressed",
+            "images_directory": "fire_risk_classifier/data/images/ortos2018-IRG-62_5m-decompressed",
         }
 
         # self.class_names = ["low", "medium", "high", "very_high", "extreme"]
