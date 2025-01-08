@@ -15,8 +15,8 @@ class ArgumentParser:
 
     def __add_arguments(self):
         self.parser.add_argument("--algorithm", default="", type=str)
-        self.parser.add_argument("--train", default="", type=str)
-        self.parser.add_argument("--test", default="", type=str)
+        self.parser.add_argument("--train", default=False, type=bool)
+        self.parser.add_argument("--test", default=False, type=bool)
         self.parser.add_argument("--nm", default="", type=str)
         self.parser.add_argument("--prepare", default="", type=str)
         self.parser.add_argument("--num_gpus", default=1, type=int)
@@ -29,6 +29,7 @@ class ArgumentParser:
         self.parser.add_argument("--generator", default="", type=str)
         self.parser.add_argument("--database", default="", type=str)
         self.parser.add_argument("--path", default="", type=str)
+        self.parser.add_argument("--ndvi", default=False, type=bool)
 
     def get_parser_dict(self) -> dict[str, Any]:
         return vars(self.parser.parse_args())

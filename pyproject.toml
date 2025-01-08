@@ -34,3 +34,5 @@ get_images = "fire_risk_classifier.scripts.get_images:main"
 decompress_images = "fire_risk_classifier.scripts.decompress_images:main"
 generate_dataset_csv = "fire_risk_classifier.scripts.create_test_and_train_csv:main"
 create_images_to_balance = "fire_risk_classifier.scripts.create_images_to_balance:main"
+
+full_test = "fire_risk_classifier.scripts.full_test_hydra:main"

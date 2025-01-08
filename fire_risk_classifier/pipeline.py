@@ -21,7 +21,7 @@ from fire_risk_classifier.data.image_dataset import CustomImageDataset
 
 
 class Pipeline:
-    def __init__(self, params: Params = None, args: dict | None = None):
+    def __init__(self, params: Params = Params(), args: dict | None = None):
         """
         Initialize baseline class, prepare data, and calculate class weights.
         :param params: global parameters, used to find location of the dataset and json file
@@ -31,38 +31,47 @@ class Pipeline:
 
         if args is None:
             args = {}
-        if args["train"]:
+        if args.get("train"):
             self.params.train_cnn = True
-        if args["path"]:
-            self.params.path = args["path"]
-        """if parser["prepare"]:
-            prepare_data(params)"""
-        if args["algorithm"]:
-            self.params.algorithm = args["algorithm"]
-        if args["test"]:
+        if args.get("path"):
+            self.params.path = args.get("path")
+        if args.get("algorithm"):
+            self.params.algorithm = args.get("algorithm")
+        if args.get("calculate_ndvi_index"):
+            self.params.calculate_ndvi_index = True
+        if args.get("test"):
             self.params.test_cnn = True
-        if args["num_gpus"]:
-            self.params.num_gpus = args["num_gpus"]
-        if args["load_weights"]:
-            self.params.model_weights = args["load_weights"]
-        if args["num_epochs"]:
-            self.params.cnn_epochs = args["num_epochs"]
-        if args["batch_size"]:
-            self.params.batch_size_cnn = args["batch_size"]
-        if args["fine_tunning"]:
+        if args.get("num_gpus"):
+            self.params.num_gpus = args.get("num_gpus")
+        if args.get("load_weights"):
+            self.params.model_weights = args.get("load_weights")
+        if args.get("num_epochs"):
+            self.params.cnn_epochs = args.get("num_epochs")
+        if args.get("batch_size"):
+            self.params.batch_size_cnn = args.get("batch_size")
+        if args.get("fine_tunning"):
             self.params.fine_tunning = True
-        if args["class_weights"]:
-            self.params.class_weights = args["class_weights"]
+        if args.get("class_weights"):
+            self.params.class_weights = args.get("class_weights")
 
         self.__init_data_loaders()
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logging.info(f"Using device: {self.device}")
 
+    # ------------------- Data Loaders ------------------- #
+
     def __init_data_loaders(self):
         directories = self.params.directories
         batch_size = self.params.batch_size_cnn
 
+        if self.params.train_cnn:
+            self.__init_train_dataloader(directories, batch_size)
+
+        if self.params.test_cnn:
+            self.__init_test_dataloader(directories, batch_size)
+
+    def __init_train_dataloader(self, directories: dict[str, str], batch_size: int):
         if self.params.train_cnn:
             transform = transforms.Compose(
                 [
@@ -70,36 +79,51 @@ class Pipeline:
                     transforms.RandomVerticalFlip(),
                     transforms.RandomRotation(20),
                     transforms.ToTensor(),
-                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
                 ]
             )
 
             # Training data loader
             self.dataset = CustomImageDataset(
-                directories["annotations_file"],
                 directories["images_directory"],
+                directories["annotations_file"],
                 transform=transform,
+                ndvi_index=self.params.calculate_ndvi_index,
+                normalize_transform=self.__get_normalize_transform(),
             )
             self.data_loader = DataLoader(
                 self.dataset, batch_size=batch_size, shuffle=True
             )
 
-        if self.params.test_cnn:
-            transform = transforms.Compose(
-                [
-                    transforms.ToTensor(),
-                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-                ]
+    def __init_test_dataloader(self, directories: dict[str, str], batch_size: int):
+        transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            ]
+        )
+        # Testing data loader
+        self.test_dataset = CustomImageDataset(
+            directories["images_directory"],
+            directories["testing_annotations_file"],
+            transform=transform,
+            ndvi_index=self.params.calculate_ndvi_index,
+            normalize_transform=self.__get_normalize_transform(),
+        )
+        self.test_data_loader = DataLoader(
+            self.test_dataset, batch_size=batch_size, shuffle=False
+        )
+
+    def __get_normalize_transform(self) -> transforms.Normalize:
+        return (
+            transforms.Normalize(
+                mean=(0.5, 0.5, 0.5, 0.0),
+                std=(0.5, 0.5, 0.5, 1.0),
             )
-            # Testing data loader
-            self.test_dataset = CustomImageDataset(
-                directories["testing_annotations_file"],
-                directories["images_directory"],
-                transform=transform,
-            )
-            self.test_data_loader = DataLoader(
-                self.test_dataset, batch_size=batch_size, shuffle=True
-            )
+            if self.params.calculate_ndvi_index
+            else transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        )
+
+    # ------------------- Training and Testing ------------------- #
 
     def train_cnn(self):
         model = get_cnn_model(self.params).to(self.device)
@@ -171,10 +195,6 @@ class Pipeline:
                 f"Accuracy: {100 * correct_predictions / total_samples:.2f}%, "
                 f"LR: {scheduler.get_last_lr()[0]}"
             )
-            # Save checkpoint
-            # if epoch % 5 == 0 and step == 0:
-            # if epoch == 0 and step == 0:
-            #    self.__save_checkpoint(model, epoch)
 
     def test_cnn(self, plot_confusion_matrix: bool = True) -> list[int]:
         model = get_cnn_model(self.params).to(self.device)
@@ -234,7 +254,7 @@ class Pipeline:
             self.params.directories["cnn_checkpoint_weights"],
             self.params.model_weights,
         )
-        model.load_state_dict(torch.load(path))
+        model.load_state_dict(torch.load(path, weights_only=False))
         logging.info(f"Loaded model weights from {self.params.model_weights}")
 
     def __get_scheduler(self, optimizer: optim.Optimizer) -> LambdaLR:
@@ -285,12 +305,3 @@ class Pipeline:
         plt.ylabel("True Labels")
         plt.title("Confusion Matrix")
         plt.show()
-
-    def __save_checkpoint(self, model: nn.Module, epoch: int):
-        os.makedirs(self.params.directories["cnn_checkpoint_weights"], exist_ok=True)
-        logging.info(f"Saving checkpoint for epoch {epoch}")
-        checkpoint_path = os.path.join(
-            self.params.directories["cnn_checkpoint_weights"],
-            f"{self.params.algorithm}_test_checkpoint_epoch_{epoch}.pth",
-        )
-        torch.save(model.state_dict(), checkpoint_path)

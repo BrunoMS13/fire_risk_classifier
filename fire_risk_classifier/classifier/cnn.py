@@ -1,5 +1,6 @@
 import logging
 
+import torch
 import torch.nn as nn
 from torchvision import models
 
@@ -28,6 +29,9 @@ def get_resnet_model(params: Params) -> models.ResNet:
     base_model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
     num_features = base_model.fc.in_features
 
+    if params.calculate_ndvi_index:
+        __adapt_model_to_ndvi(base_model)
+
     for param in base_model.parameters():
         # Set to False if you want to freeze layers of feature extractor.
         param.requires_grad = True
@@ -38,8 +42,11 @@ def get_resnet_model(params: Params) -> models.ResNet:
 
 def get_densenet_model(params: Params) -> models.DenseNet:
     logging.info("Using DenseNet161 model.")
-    base_model = models.densenet161(pretrained=True)
+    base_model = models.densenet161(weights=models.DenseNet161_Weights.DEFAULT)
     num_features = base_model.classifier.in_features
+
+    if params.calculate_ndvi_index:
+        __adapt_model_to_ndvi(base_model)
 
     for param in base_model.parameters():
         # Set to False if you want to freeze layers of feature extractor.
@@ -47,6 +54,24 @@ def get_densenet_model(params: Params) -> models.DenseNet:
 
     base_model.classifier = get_classifier_model(params, num_features)
     return base_model
+
+
+def __adapt_model_to_ndvi(self, base_model: nn.Module):
+    original_conv0 = base_model.features.conv0
+    base_model.features.conv0 = nn.Conv2d(
+        in_channels=4,
+        out_channels=original_conv0.out_channels,
+        kernel_size=original_conv0.kernel_size,
+        stride=original_conv0.stride,
+        padding=original_conv0.padding,
+        bias=False,
+    )
+    # Initialize weights for the new channel
+    with torch.no_grad():
+        # Copy RGB weights
+        base_model.features.conv0.weight[:, :3, :, :] = original_conv0.weight
+        # Copy NIR weights
+        base_model.features.conv0.weight[:, 3, :, :] = original_conv0.weight[:, 0, :, :]
 
 
 class Classifier(nn.Module):

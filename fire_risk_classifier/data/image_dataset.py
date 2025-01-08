@@ -12,11 +12,12 @@ import torchvision.transforms as transforms
 class CustomImageDataset(Dataset):
     def __init__(
         self,
-        annotations_file,
-        img_dir,
-        transform=transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-        target_transform=None,
-        task="classification",
+        img_dir: str,
+        annotations_file: str,
+        transform=None,
+        normalize_transform=None,
+        ndvi_index: bool = False,
+        task: str = "classification",
     ):
 
         self.img_labels = pd.read_csv(annotations_file)
@@ -24,8 +25,10 @@ class CustomImageDataset(Dataset):
 
         self.img_dir = img_dir
         self.transform = transform
-        self.target_transform = target_transform
+        self.normalize_transform = normalize_transform
+
         self.task = task.lower()
+        self.ndvi_index = ndvi_index
 
         self.classes = list(classes)
         self.class2idx = {self.classes[i]: i for i in range(len(self.classes))}
@@ -45,9 +48,21 @@ class CustomImageDataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        if label >= 0 and self.target_transform:
-            label = self.target_transform(label)
+        if self.ndvi_index:
+            image = self.__get_image_with_ndvi_index(image)
+
+        image = self.normalize_transform(image)
+
         return image, label
+
+    def __get_image_with_ndvi_index(self, image):
+        infrared = image[0, :, :]
+        red = image[2, :, :]
+
+        # NDVI = (NIR - RED) / (NIR + RED) adding epsilon to avoid division by zero.
+        epsilon = 1e-6
+        ndvi = (infrared - red) / (infrared + red + epsilon)
+        return torch.cat((image, ndvi.unsqueeze(0)), dim=0)
 
     def show(self, idx: int):
         img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0] + ".png")

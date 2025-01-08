@@ -1,6 +1,7 @@
-import asyncio
 from collections import Counter
 from fire_risk_classifier.pipeline import Pipeline
+from fire_risk_classifier.utils.logger import Logger
+from fire_risk_classifier.dataclasses.params import Params
 
 model_names = [
     "densenet_CW_FT_final_model.pth",
@@ -10,7 +11,7 @@ model_names = [
 ]
 
 CALCULATE_IRG = True
-CALCULATE_RGB = False
+CALCULATE_RGB = True
 
 
 def majority_vote(all_predictions_list):
@@ -19,58 +20,80 @@ def majority_vote(all_predictions_list):
     return [Counter(preds).most_common(1)[0][0] for preds in combined_predictions]
 
 
-async def async_get_predictions(model_path: str) -> list:
+def get_predictions(model: str, params: Params) -> list:
+    """Runs the pipeline synchronously and gets predictions."""
     args = {
         "test": True,
-        "load_weights": model_path,
-        "algorithm": "densenet" if "densenet" in model_path else "resnet",
+        "load_weights": model,
+        "algorithm": "densenet" if "densenet" in model else "resnet",
     }
-    pipeline = Pipeline(args=args)
-    return await pipeline.test_cnn(plot_confusion_matrix=False)
+    pipeline = Pipeline(params=params, args=args)
+    return pipeline.test_cnn(plot_confusion_matrix=False)
+
+
+def get_params(is_irg: bool) -> Params:
+    params = Params()
+
+    base_path = "fire_risk_classifier/data/cnn_checkpoint_weights/"
+    params.directories["cnn_checkpoint_weights"] = (
+        f"{base_path}IRG_2C/" if is_irg else f"{base_path}RGB_2C/"
+    )
+
+    base_images_path = "fire_risk_classifier/data/images/"
+    params.directories["images_directory"] = (
+        f"{base_images_path}ortos2018-IRG-62_5m-decompressed"
+        if is_irg
+        else f"{base_images_path}ortos2018-RGB-62_5m-decompressed"
+    )
+
+    return params
+
+
+def write_results(results: list, is_irg: bool):
+    for i, (labels, predictions) in enumerate(results):
+        with open(
+            f"results_{model_names[i]}_{'IRG' if is_irg else 'RGB'}.txt", "w"
+        ) as f:
+            f.write("label,prediction\n")
+            for label, prediction in zip(labels, predictions):
+                f.write(f"{label},{prediction}\n")
 
 
 def main():
-    classes = 2
     all_labels_combined = None
     all_predictions_combined = []
+    Logger.initialize_logger()
 
     if CALCULATE_IRG:
-        irg_path = f"/models/IRG_{classes}C"
-        paths = [f"{irg_path}/{model}" for model in model_names]
-
         # Run all pipelines and collect results
-        predictions_coros = [async_get_predictions(path) for path in paths]
-        results = asyncio.run(asyncio.gather(*predictions_coros))
+        params = get_params(is_irg=True)
+        results = [get_predictions(model, params) for model in model_names]
+        write_results(results, is_irg=True)
 
         all_labels, all_predictions_list = zip(*results)
-
-        # Assuming all pipelines use the same labels, we take the first set
         if all_labels_combined is None:
             all_labels_combined = all_labels[0]
 
         all_predictions_combined.extend(all_predictions_list)
 
     if CALCULATE_RGB:
-        rgb_path = f"/models/RGB_{classes}C"
-        paths = [f"{rgb_path}/{model}" for model in model_names]
-
-        # Run all pipelines and collect results
-        predictions_coros = [async_get_predictions(path) for path in paths]
-        results = asyncio.run(asyncio.gather(*predictions_coros))
+        params = get_params(is_irg=False)
+        results = [get_predictions(model, params) for model in model_names]
+        write_results(results, is_irg=False)
 
         all_labels, all_predictions_list = zip(*results)
-
-        # Assuming all pipelines use the same labels, we take the first set
         if all_labels_combined is None:
             all_labels_combined = all_labels[0]
 
         all_predictions_combined.extend(all_predictions_list)
 
-    # Perform majority voting
     final_predictions = majority_vote(all_predictions_combined)
 
-    # Print accuracy
     accuracy = sum(
         l == p for l, p in zip(all_labels_combined, final_predictions)
     ) / len(all_labels_combined)
     print(f"Combined Accuracy: {accuracy:.2%}")
+
+
+if __name__ == "__main__":
+    main()
