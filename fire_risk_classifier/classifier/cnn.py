@@ -55,7 +55,7 @@ def get_densenet_model(params: Params) -> models.DenseNet:
 def get_inception_model(params: Params) -> models.Inception3:
     logging.info("Using InceptionV3 model.")
     base_model = models.inception_v3(
-        weights=models.Inception_V3_Weights.DEFAULT, aux_logits=False
+        weights=models.Inception_V3_Weights.DEFAULT, aux_logits=True
     )
     num_features = base_model.fc.in_features
 
