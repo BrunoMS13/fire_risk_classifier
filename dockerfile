@@ -21,8 +21,8 @@ ENV PATH="/app/.venv/bin:$PATH"
 # Copy the rest of the project files
 COPY . .
 
-# Install dependencies without development packages
-RUN poetry install --no-dev
+# Install dependencies
+RUN poetry install
 
 # Set the command to run the application
 CMD ["poetry", "run", "train"]

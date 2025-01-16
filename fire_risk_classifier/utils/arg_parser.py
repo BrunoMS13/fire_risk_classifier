@@ -30,6 +30,8 @@ class ArgumentParser:
         self.parser.add_argument("--database", default="", type=str)
         self.parser.add_argument("--path", default="", type=str)
         self.parser.add_argument("--ndvi", default=False, type=bool)
+        self.parser.add_argument("--images_dir", default="", type=str)
+        self.parser.add_argument("--save_as", default="", type=str)
 
     def get_parser_dict(self) -> dict[str, Any]:
         return vars(self.parser.parse_args())

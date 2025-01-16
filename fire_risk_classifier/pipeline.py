@@ -54,6 +54,10 @@ class Pipeline:
             self.params.fine_tunning = True
         if args.get("class_weights"):
             self.params.class_weights = args.get("class_weights")
+        if args.get("images_dir"):
+            self.params.directories["images_directory"] = args.get("images_dir")
+        if args.get("save_as"):
+            self.params.save_as = args.get("save_as")
 
         self.__init_data_loaders()
 
@@ -153,6 +157,8 @@ class Pipeline:
         torch.save(model.state_dict(), final_path)
 
     def __create_model_name(self) -> str:
+        if self.params.save_as:
+            return self.params.save_as
         if self.__is_body():
             return f"{self.params.algorithm}_body_2C.pth"
         fine_tunned = "FT" if self.params.fine_tunning else "NFT"

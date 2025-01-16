@@ -56,6 +56,7 @@ class Params:
             "cnn_checkpoint_weights": "fire_risk_classifier/data/cnn_checkpoint_weights/",
             "images_directory": "fire_risk_classifier/data/images/ortos2018-IRG-62_5m-decompressed",
         }
+        self.save_as = ""
 
         # self.class_names = ["low", "medium", "high", "very_high", "extreme"]
         self.class_names = ["medium", "extreme"]
