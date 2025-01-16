@@ -13,6 +13,12 @@ def get_cnn_model(params: Params) -> nn.Module:
         return get_resnet_model(params)
     if params.algorithm == "densenet":
         return get_densenet_model(params)
+    if params.algorithm == "inception":
+        return get_inception_model(params)
+    if params.algorithm == "efficientnet":
+        return get_efficientnet_model(params)
+    if params.algorithm == "vgg":
+        return get_vgg_model(params)
     raise ValueError(f"Invalid algorithm: {params.algorithm}")
 
 
@@ -29,12 +35,7 @@ def get_resnet_model(params: Params) -> models.ResNet:
     base_model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
     num_features = base_model.fc.in_features
 
-    if params.calculate_ndvi_index:
-        __adapt_model_to_ndvi(base_model)
-
-    for param in base_model.parameters():
-        # Set to False if you want to freeze layers of feature extractor.
-        param.requires_grad = True
+    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=True)
 
     base_model.fc = get_classifier_model(params, num_features)
     return base_model
@@ -45,15 +46,55 @@ def get_densenet_model(params: Params) -> models.DenseNet:
     base_model = models.densenet161(weights=models.DenseNet161_Weights.DEFAULT)
     num_features = base_model.classifier.in_features
 
-    if params.calculate_ndvi_index:
-        __adapt_model_to_ndvi(base_model)
-
-    for param in base_model.parameters():
-        # Set to False if you want to freeze layers of feature extractor.
-        param.requires_grad = True
+    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=True)
 
     base_model.classifier = get_classifier_model(params, num_features)
     return base_model
+
+
+def get_inception_model(params: Params) -> models.Inception3:
+    logging.info("Using InceptionV3 model.")
+    base_model = models.inception_v3(
+        weights=models.Inception_V3_Weights.DEFAULT, aux_logits=False
+    )
+    num_features = base_model.fc.in_features
+
+    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=True)
+
+    base_model.fc = get_classifier_model(params, num_features)
+    return base_model
+
+
+def get_efficientnet_model(params: Params) -> models.EfficientNet:
+    logging.info("Using EfficientNetB4 model.")
+    base_model = models.efficientnet_b4(weights=models.EfficientNet_B4_Weights.DEFAULT)
+    num_features = base_model.classifier[1].in_features
+
+    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=True)
+
+    base_model.classifier[1] = get_classifier_model(params, num_features)
+    return base_model
+
+
+def get_vgg_model(params: Params) -> models.VGG:
+    logging.info("Using VGG16 model.")
+    base_model = models.vgg16(weights=models.VGG16_Weights.DEFAULT)
+    num_features = base_model.classifier[6].in_features
+
+    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=True)
+
+    base_model.classifier[6] = get_classifier_model(params, num_features)
+    return base_model
+
+
+def __adapt_model(
+    calculate_ndvi_index: bool, base_model: nn.Module, freeze_layers: bool
+):
+    if calculate_ndvi_index:
+        __adapt_model_to_ndvi(base_model)
+
+    for param in base_model.parameters():
+        param.requires_grad = not freeze_layers
 
 
 def __adapt_model_to_ndvi(self, base_model: nn.Module):

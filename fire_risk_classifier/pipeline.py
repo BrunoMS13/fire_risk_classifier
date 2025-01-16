@@ -149,10 +149,7 @@ class Pipeline:
             self.params.directories["cnn_checkpoint_weights"],
             self.__create_model_name(),
         )
-        with contextlib.suppress(OSError):
-            os.makedirs(
-                self.params.directories["cnn_checkpoint_weights"], exist_ok=True
-            )
+        os.makedirs(self.params.directories["cnn_checkpoint_weights"], exist_ok=True)
         torch.save(model.state_dict(), final_path)
 
     def __create_model_name(self) -> str:
