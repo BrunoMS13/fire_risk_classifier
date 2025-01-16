@@ -79,6 +79,7 @@ def get_efficientnet_model(params: Params) -> models.EfficientNet:
 def get_vgg_model(params: Params) -> models.VGG:
     logging.info("Using VGG16 model.")
     base_model = models.vgg16(weights=models.VGG16_Weights.DEFAULT)
+    models.vgg19
     num_features = base_model.classifier[6].in_features
 
     __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=True)
