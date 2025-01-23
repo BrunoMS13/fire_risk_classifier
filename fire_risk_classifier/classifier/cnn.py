@@ -11,7 +11,7 @@ def get_cnn_model(params: Params) -> nn.Module:
     match params.algorithm:
         case "resnet" | "resnet101" | "resnet152":
             return get_resnet_model(params)
-        case "densenet" | "densenet121" | "densenet169" | "densenet201":
+        case "densenet" | "densenet169" | "densenet201":
             return get_densenet_model(params)
         case "efficientnet":
             return get_efficientnet_model(params)
@@ -72,7 +72,6 @@ def get_densenet_model(params: Params) -> models.DenseNet:
             raise ValueError(f"Invalid algorithm: {algorithm}")
 
     num_features = base_model.classifier.in_features
-    models.dens
     __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=True)
 
     base_model.classifier = get_classifier_model(params, num_features)

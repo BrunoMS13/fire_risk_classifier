@@ -1,7 +1,6 @@
 import os
+import json
 import logging
-import argparse
-import contextlib
 from typing import Any
 
 import torch
@@ -11,7 +10,6 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import LambdaLR
 
-import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
@@ -146,10 +144,15 @@ class Pipeline:
 
         # Load saved model weights
         self.__load_model_weights(model)
+        epoch_data = {"loss": [], "accuracy": []}
 
         for epoch in range(self.params.cnn_epochs):
             self.current_epoch = epoch
-            self.__training_step(epoch, model, optimizer, scheduler, criterion)
+            loss, accuracy = self.__training_step(
+                epoch, model, optimizer, scheduler, criterion
+            )
+            epoch_data["loss"].append(loss)
+            epoch_data["accuracy"].append(accuracy)
             torch.cuda.empty_cache()
 
         logging.info(
@@ -157,19 +160,26 @@ class Pipeline:
         )
         final_path = os.path.join(
             self.params.directories["cnn_checkpoint_weights"],
-            self.__create_model_name(),
+            f"{self.__create_model_name()}.pth",
         )
         os.makedirs(self.params.directories["cnn_checkpoint_weights"], exist_ok=True)
         torch.save(model.state_dict(), final_path)
+
+        metrics_path = os.path.join(
+            self.params.directories["cnn_checkpoint_weights"],
+            f"{self.__create_model_name()}_metrics.json",
+        )
+        with open(metrics_path, "w") as f:
+            json.dump(epoch_data, f)
 
     def __create_model_name(self) -> str:
         if self.params.save_as:
             return self.params.save_as
         if self.__is_body():
-            return f"{self.params.algorithm}_body_2C.pth"
+            return f"{self.params.algorithm}_body_2C"
         fine_tunned = "FT" if self.params.fine_tunning else "NFT"
         class_weights = "CW" if self.params.class_weights else "NCW"
-        return f"{self.params.algorithm}_{class_weights}_{fine_tunned}_final_model.pth"
+        return f"{self.params.algorithm}_{class_weights}_{fine_tunned}_final_model"
 
     def __is_body(self) -> bool:
         return self.params.cnn_epochs == 12
@@ -181,7 +191,7 @@ class Pipeline:
         optimizer: optim.Optimizer,
         scheduler: LambdaLR,
         criterion: nn.Module,
-    ):
+    ) -> tuple:
         model.train()
 
         total_samples = 0
@@ -213,6 +223,10 @@ class Pipeline:
                 f"Accuracy: {100 * correct_predictions / total_samples:.2f}%, "
                 f"LR: {scheduler.get_last_lr()[0]}"
             )
+
+        avg_loss = running_loss / total_steps
+        accuracy = 100 * correct_predictions / total_samples
+        return avg_loss, accuracy
 
     def test_cnn(self, plot_confusion_matrix: bool = True) -> list[int]:
         model = get_cnn_model(self.params).to(self.device)
