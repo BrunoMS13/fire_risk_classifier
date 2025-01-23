@@ -15,6 +15,7 @@ class FireRisk(Enum):
         if match := re.search(r"#m(?:sn)?_([a-z]+)-", style_url, re.IGNORECASE):
             color_code = match[1].upper()
             # Map the extracted part to FireRisk levels.
+            print(color_code, style_url, name)
             mapping = {
                 "BLU": FireRisk.LOW,
                 "GRN": FireRisk.MEDIUM,

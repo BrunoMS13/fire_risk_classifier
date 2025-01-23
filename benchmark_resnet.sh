@@ -7,21 +7,21 @@ docker build -t fire_risk_classifier_image .
 
 echo "Benchmark training resnets..."
 
-docker run -it --rm -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train --algorithm resnet --batch_size 64 --train True
+docker run -it --rm -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train --algorithm resnet --batch_size 64 --train True --num_epochs 12
 
 echo "Copying resnet50..."
 
-mkdir -p ~/models/resnet
-cp -r $WEIGHTS_PATH/* ~/models/resnet
+mkdir -p ~/models/resnet50
+cp -r $WEIGHTS_PATH/* ~/models/resnet50
 
-docker run -it --rm -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train --algorithm resnet101 --batch_size 64 --train True
+docker run -it --rm -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train --algorithm resnet101 --batch_size 64 --train True --num_epochs 12
 
 echo "Copying resnet101..."
 
 mkdir -p ~/models/resnet101
 cp -r $WEIGHTS_PATH/* ~/models/resnet101
 
-docker run -it --rm -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train --algorithm resnet152 --batch_size 64 --train True
+docker run -it --rm -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train --algorithm resnet152 --batch_size 64 --train True --num_epochs 12
 
 echo "Copying resnet152..."
 

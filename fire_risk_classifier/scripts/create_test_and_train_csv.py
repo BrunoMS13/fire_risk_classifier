@@ -4,12 +4,8 @@ import random
 from typing import Any
 from collections import defaultdict
 
-from fire_risk_classifier.utils.extractor import Extractor
-from fire_risk_classifier.utils.kml_reader import KMLReader
-from fire_risk_classifier.dataclasses.house_point import HousePoint
 
-
-RANDOM_SEED = 42
+RANDOM_SEED = 10
 TRAIN_RATIO = 0.7
 
 low_risk = [0, 1]
@@ -18,26 +14,17 @@ extreme_risks = [3, 4]
 
 
 def get_all_points() -> list[dict[str, Any]]:
-    kmz_path = "fire_risk_classifier/data/Pontos.kmz"
-
-    extractor = Extractor(kmz_path)
-    kml_file = extractor.get_file_data()
-    kml_reader = KMLReader(kml_file)
-    data = kml_reader.get_kml_data()
-
-    all_points = []
-    for _, points in data.items():
-        all_points.extend(
-            {"image_id": point.name, "fire_risk": point.fire_risk.value}
-            for point in points
-        )
-    return all_points
+    points = []
+    with open("labels.csv", mode="r") as csv_file:
+        csv_reader = csv.DictReader(csv_file)
+        points.extend(iter(csv_reader))
+    return points
 
 
 def get_parsed_data(data: list[dict[str, Any]], n_classes: int) -> tuple:
     updated_data, data_distribution = [], defaultdict(int)
     for d in data:
-        risk = d["fire_risk"]
+        risk = int(d["fire_risk"])
 
         if n_classes == 2:
             if risk in low_risk + medium_risks:
@@ -46,6 +33,7 @@ def get_parsed_data(data: list[dict[str, Any]], n_classes: int) -> tuple:
                 continue
             data_distribution[1] += 1
             updated_data.append({"image_id": d["image_id"], "fire_risk": 1})
+
         elif n_classes == 3:
             if risk in low_risk:
                 updated_data.append({"image_id": d["image_id"], "fire_risk": 0})
@@ -81,7 +69,7 @@ def main():
     random.seed(RANDOM_SEED)
 
     all_points = get_all_points()
-    random.shuffle(all_points)
+    # random.shuffle(all_points)
 
     train_size = int(len(all_points) * TRAIN_RATIO)
     train_data = all_points[:train_size]

@@ -155,16 +155,21 @@ class Pipeline:
             epoch_data["accuracy"].append(accuracy)
             torch.cuda.empty_cache()
 
+        self.__save_model(model, epoch_data)
+
+    def __save_model(self, model: nn.Module, epoch_data: dict):
+        # Save model
         logging.info(
             f"Saving final model to {self.params.directories['cnn_checkpoint_weights']}"
         )
-        final_path = os.path.join(
+        model_path = os.path.join(
             self.params.directories["cnn_checkpoint_weights"],
             f"{self.__create_model_name()}.pth",
         )
         os.makedirs(self.params.directories["cnn_checkpoint_weights"], exist_ok=True)
-        torch.save(model.state_dict(), final_path)
+        torch.save(model.state_dict(), model_path)
 
+        # Save metrics
         metrics_path = os.path.join(
             self.params.directories["cnn_checkpoint_weights"],
             f"{self.__create_model_name()}_metrics.json",
@@ -287,7 +292,7 @@ class Pipeline:
             self.params.model_weights,
         )
         model.load_state_dict(torch.load(path, weights_only=False))
-        logging.info(f"Loaded model weights from {self.params.model_weights}")
+        logging.info(f"Loaded model weights from {path}")
 
     def __get_scheduler(self, optimizer: optim.Optimizer) -> LambdaLR:
         def lr_lambda(step: int) -> float:

@@ -6,8 +6,8 @@ from fire_risk_classifier.dataclasses.params import Params
 model_names = [
     "densenet_CW_FT_final_model.pth",
     "densenet_NCW_FT_final_model.pth",
-    "resnet_CW_FT_final_model.pth",
-    "resnet_NCW_FT_final_model.pth",
+    # "resnet_CW_FT_final_model.pth",
+    # "resnet_NCW_FT_final_model.pth",
 ]
 
 CALCULATE_IRG = True
