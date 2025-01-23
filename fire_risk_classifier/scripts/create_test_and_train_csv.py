@@ -5,7 +5,7 @@ from typing import Any
 from collections import defaultdict
 
 
-RANDOM_SEED = 10
+RANDOM_SEED = 15
 TRAIN_RATIO = 0.7
 
 low_risk = [0, 1]
@@ -69,7 +69,7 @@ def main():
     random.seed(RANDOM_SEED)
 
     all_points = get_all_points()
-    # random.shuffle(all_points)
+    random.shuffle(all_points)
 
     train_size = int(len(all_points) * TRAIN_RATIO)
     train_data = all_points[:train_size]
