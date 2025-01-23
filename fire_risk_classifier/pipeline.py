@@ -34,16 +34,12 @@ class Pipeline:
             args = {}
         if args.get("train"):
             self.params.train_cnn = True
-        if args.get("path"):
-            self.params.path = args.get("path")
+        if args.get("test"):
+            self.params.test_cnn = True
         if args.get("algorithm"):
             self.params.algorithm = args.get("algorithm")
         if args.get("calculate_ndvi_index"):
             self.params.calculate_ndvi_index = True
-        if args.get("test"):
-            self.params.test_cnn = True
-        if args.get("num_gpus"):
-            self.params.num_gpus = args.get("num_gpus")
         if args.get("load_weights"):
             self.params.model_weights = args.get("load_weights")
         if args.get("num_epochs"):
@@ -58,6 +54,16 @@ class Pipeline:
             self.params.directories["images_directory"] = args.get("images_dir")
         if args.get("save_as"):
             self.params.save_as = args.get("save_as")
+        if args.get("num_classes"):
+            num_classes = args.get("num_classes")
+            self.params.num_labels = num_classes
+            path = "fire_risk_classifier/data/csvs"
+            self.params.directories["annotations_file"] = (
+                f"{path}/train_{num_classes}classes.csv"
+            )
+            self.params.directories["testing_annotations_file"] = (
+                f"{path}/test_{num_classes}classes.csv"
+            )
 
         self.__init_data_loaders()
 

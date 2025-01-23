@@ -4,7 +4,7 @@ from PIL import Image
 
 # Useful for images that are not RGB, such as the ones in the dataset provided by the client that are in palette mode.
 def decompress_images(input_directory: str):
-    output_directory = input_directory + "-decompressed"
+    output_directory = f"{input_directory}-decompressed"
     # Create output directory if it doesn't exist
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
@@ -29,5 +29,5 @@ def decompress_images(input_directory: str):
 
 
 def main():
-    image_directory = "fire_risk_classifier/data/images/ortos2018-RGB-62_5m"
+    image_directory = "fire_risk_classifier/data/images/ortos2018-RGB-50m"
     decompress_images(image_directory)

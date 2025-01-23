@@ -14,8 +14,8 @@ from fire_risk_classifier.dataclasses.bounding_box import BoundingBox
 
 
 BATCH_SIZE = 20
-BBOX_SIZE = 62.5
-IMAGE_TYPE = "RGB"  # Can be "IRG" or "RGB"
+BBOX_SIZE = 50
+IMAGE_TYPE = "IRG"  # Can be "IRG" or "RGB"
 
 
 async def save_map_image(
@@ -23,11 +23,11 @@ async def save_map_image(
     fetcher: WMSFetcher,
     house_point: HousePoint,
 ):
-    directory_path = f"fire_risk_classifier/data/images/ortos2018-{IMAGE_TYPE}-62_5m"
+    directory_path = f"fire_risk_classifier/data/images/ortos2018-{IMAGE_TYPE}-50m"
     os.makedirs(directory_path, exist_ok=True)
 
     image_data = await fetcher.get_map(bbox=bbox)
-    file_path = f"{directory_path}/{house_point.name}-{IMAGE_TYPE}.png"
+    file_path = f"{directory_path}/{house_point.name}.png"
 
     async with aiofiles.open(file_path, mode="wb") as file:
         await file.write(image_data)

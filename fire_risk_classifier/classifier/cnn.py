@@ -7,18 +7,18 @@ from torchvision import models
 from fire_risk_classifier.dataclasses.params import Params
 
 
-# t
 def get_cnn_model(params: Params) -> nn.Module:
-    if params.algorithm == "resnet":
-        return get_resnet_model(params)
-    if params.algorithm == "densenet":
-        return get_densenet_model(params)
-    if params.algorithm == "inception":
-        return get_inception_model(params)
-    if params.algorithm == "efficientnet":
-        return get_efficientnet_model(params)
-    if params.algorithm == "vgg":
-        return get_vgg_model(params)
+    match params.algorithm:
+        case "resnet" | "resnet101" | "resnet152":
+            return get_resnet_model(params)
+        case "densenet" | "densenet121" | "densenet169" | "densenet201":
+            return get_densenet_model(params)
+        case "efficientnet":
+            return get_efficientnet_model(params)
+        case "vgg":
+            return get_vgg_model(params)
+        case _:
+            raise ValueError(f"Invalid algorithm: {params.algorithm}")
     raise ValueError(f"Invalid algorithm: {params.algorithm}")
 
 
@@ -30,9 +30,21 @@ def get_classifier_model(params: Params, num_features: int) -> "Classifier":
     )
 
 
+# ------------- ResNet models ------------- #
+
+
 def get_resnet_model(params: Params) -> models.ResNet:
-    logging.info("Using ResNet50 model.")
-    base_model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+    algorithm = params.algorithm
+    match algorithm:
+        case "resnet":
+            logging.info("Using ResNet50 model.")
+            base_model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+        case "resnet101":
+            logging.info("Using ResNet101 model.")
+            base_model = models.resnet101(weights=models.ResNet101_Weights.DEFAULT)
+        case "resnet152":
+            logging.info("Using ResNet152 model.")
+            base_model = models.resnet152(weights=models.ResNet152_Weights.DEFAULT)
     num_features = base_model.fc.in_features
 
     __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=True)
@@ -41,15 +53,33 @@ def get_resnet_model(params: Params) -> models.ResNet:
     return base_model
 
 
-def get_densenet_model(params: Params) -> models.DenseNet:
-    logging.info("Using DenseNet161 model.")
-    base_model = models.densenet161(weights=models.DenseNet161_Weights.DEFAULT)
-    num_features = base_model.classifier.in_features
+# ------------- DenseNet models ------------- #
 
+
+def get_densenet_model(params: Params) -> models.DenseNet:
+    algorithm = params.algorithm
+    match algorithm:
+        case "densenet":
+            logging.info("Using DenseNet161 model.")
+            base_model = models.densenet161(weights=models.DenseNet161_Weights.DEFAULT)
+        case "densenet169":
+            logging.info("Using DenseNet169 model.")
+            base_model = models.densenet169(weights=models.DenseNet169_Weights.DEFAULT)
+        case "densenet201":
+            logging.info("Using DenseNet201 model.")
+            base_model = models.densenet201(weights=models.DenseNet201_Weights.DEFAULT)
+        case _:
+            raise ValueError(f"Invalid algorithm: {algorithm}")
+
+    num_features = base_model.classifier.in_features
+    models.dens
     __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=True)
 
     base_model.classifier = get_classifier_model(params, num_features)
     return base_model
+
+
+# ------------- Other models ------------- #
 
 
 def get_inception_model(params: Params) -> models.Inception3:
@@ -79,7 +109,6 @@ def get_efficientnet_model(params: Params) -> models.EfficientNet:
 def get_vgg_model(params: Params) -> models.VGG:
     logging.info("Using VGG16 model.")
     base_model = models.vgg16(weights=models.VGG16_Weights.DEFAULT)
-    models.vgg19
     num_features = base_model.classifier[6].in_features
 
     __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=True)
