@@ -4,13 +4,15 @@ from fire_risk_classifier.utils.logger import Logger
 from fire_risk_classifier.dataclasses.params import Params
 
 model_names = [
-    "densenet_CW_FT_final_model.pth",
-    "densenet_NCW_FT_final_model.pth",
+    "densenet_body_2C.pth",
+    "densenet169_body_2C.pth",
+    "densenet201_body_2C.pth"
+    # "densenet_NCW_FT_final_model.pth",
     # "resnet_CW_FT_final_model.pth",
     # "resnet_NCW_FT_final_model.pth",
 ]
 
-CALCULATE_IRG = True
+CALCULATE_IRG = False
 CALCULATE_RGB = True
 
 
@@ -22,10 +24,11 @@ def majority_vote(all_predictions_list):
 
 def get_predictions(model: str, params: Params) -> list:
     """Runs the pipeline synchronously and gets predictions."""
+    algo = model.split("_")[0]
     args = {
         "test": True,
+        "algorithm": algo,
         "load_weights": model,
-        "algorithm": "densenet" if "densenet" in model else "resnet",
     }
     pipeline = Pipeline(params=params, args=args)
     return pipeline.test_cnn(plot_confusion_matrix=False)

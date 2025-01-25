@@ -19,7 +19,8 @@ docker run -it --rm -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier
 echo "Copying resnet101..."
 
 mkdir -p ~/models/resnet101
-cp -r $WEIGHTS_PATH/* ~/models/resnet101
+cp -r $WEIGHTS_PATH/resnet_body_2C.pth ~/models/resnet101
+cp -r $WEIGHTS_PATH/resnet_body_2C_metrics.json ~/models/resnet101
 
 docker run -it --rm -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train --algorithm resnet152 --batch_size 64 --train True --num_epochs 12
 
