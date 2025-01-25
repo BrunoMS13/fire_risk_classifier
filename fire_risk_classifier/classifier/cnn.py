@@ -47,7 +47,7 @@ def get_resnet_model(params: Params) -> models.ResNet:
             base_model = models.resnet152(weights=models.ResNet152_Weights.DEFAULT)
     num_features = base_model.fc.in_features
 
-    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=True)
+    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=False)
 
     base_model.fc = get_classifier_model(params, num_features)
     return base_model
@@ -72,7 +72,7 @@ def get_densenet_model(params: Params) -> models.DenseNet:
             raise ValueError(f"Invalid algorithm: {algorithm}")
 
     num_features = base_model.classifier.in_features
-    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=True)
+    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=False)
 
     base_model.classifier = get_classifier_model(params, num_features)
     return base_model
@@ -88,7 +88,7 @@ def get_inception_model(params: Params) -> models.Inception3:
     )
     num_features = base_model.fc.in_features
 
-    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=True)
+    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=False)
 
     base_model.fc = get_classifier_model(params, num_features)
     return base_model
@@ -99,7 +99,7 @@ def get_efficientnet_model(params: Params) -> models.EfficientNet:
     base_model = models.efficientnet_b4(weights=models.EfficientNet_B4_Weights.DEFAULT)
     num_features = base_model.classifier[1].in_features
 
-    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=True)
+    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=False)
 
     base_model.classifier[1] = get_classifier_model(params, num_features)
     return base_model
@@ -110,7 +110,7 @@ def get_vgg_model(params: Params) -> models.VGG:
     base_model = models.vgg16(weights=models.VGG16_Weights.DEFAULT)
     num_features = base_model.classifier[6].in_features
 
-    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=True)
+    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=False)
 
     base_model.classifier[6] = get_classifier_model(params, num_features)
     return base_model
