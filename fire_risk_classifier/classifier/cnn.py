@@ -13,9 +13,9 @@ def get_cnn_model(params: Params) -> nn.Module:
             return get_resnet_model(params)
         case "densenet" | "densenet169" | "densenet201":
             return get_densenet_model(params)
-        case "efficientnet":
+        case "efficientnet_b4" | "efficientnet_b7":
             return get_efficientnet_model(params)
-        case "vgg":
+        case "vgg16" | "vgg19" | "vgg19_bn":
             return get_vgg_model(params)
         case _:
             raise ValueError(f"Invalid algorithm: {params.algorithm}")
@@ -81,24 +81,17 @@ def get_densenet_model(params: Params) -> models.DenseNet:
 # ------------- Other models ------------- #
 
 
-def get_inception_model(params: Params) -> models.Inception3:
-    logging.info("Using InceptionV3 model.")
-    base_model = models.inception_v3(
-        weights=models.Inception_V3_Weights.DEFAULT, aux_logits=True
-    )
-    num_features = base_model.fc.in_features
-
-    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=False)
-
-    base_model.fc = get_classifier_model(params, num_features)
-    return base_model
-
-
 def get_efficientnet_model(params: Params) -> models.EfficientNet:
-    logging.info("Using EfficientNetB4 model.")
-    base_model = models.efficientnet_b4(weights=models.EfficientNet_B4_Weights.DEFAULT)
-    num_features = base_model.classifier[1].in_features
+    algorithm = params.algorithm
+    match algorithm:
+        case "efficientnet_b4":
+            logging.info("Using EfficientNetB4 model.")
+            base_model = models.efficientnet_b4(weights=models.EfficientNet_B4_Weights.DEFAULT)
+        case "efficientnet_b7":
+            logging.info("Using EfficientNetB7 model.")
+            base_model = models.efficientnet_b7(weights=models.EfficientNet_B7_Weights.DEFAULT)
 
+    num_features = base_model.classifier[1].in_features
     __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=False)
 
     base_model.classifier[1] = get_classifier_model(params, num_features)
@@ -106,10 +99,19 @@ def get_efficientnet_model(params: Params) -> models.EfficientNet:
 
 
 def get_vgg_model(params: Params) -> models.VGG:
-    logging.info("Using VGG16 model.")
-    base_model = models.vgg16(weights=models.VGG16_Weights.DEFAULT)
-    num_features = base_model.classifier[6].in_features
+    algorithm = params.algorithm
+    match algorithm:
+        case "vgg16":
+            logging.info("Using VGG16 model.")
+            base_model = models.vgg16(weights=models.VGG16_Weights.DEFAULT)
+        case "vgg19":
+            logging.info("Using VGG19 model.")
+            base_model = models.vgg19(weights=models.VGG19_Weights.DEFAULT)
+        case "vgg19_bn":
+            logging.info("Using VGG19_bn model.")
+            base_model = models.vgg19_bn(weights=models.VGG19_BN_Weights.DEFAULT)
 
+    num_features = base_model.classifier[6].in_features
     __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=False)
 
     base_model.classifier[6] = get_classifier_model(params, num_features)

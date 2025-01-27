@@ -32,3 +32,5 @@ mkdir -p ~/models/densenet201
 cp -r $WEIGHTS_PATH/densenet201_body_2C.pth ~/models/densenet201
 cp -r $WEIGHTS_PATH/densenet201_body_2C_metrics.json ~/models/densenet201
 
+
+
