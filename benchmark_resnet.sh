@@ -7,7 +7,7 @@ docker build -t fire_risk_classifier_image .
 
 echo "Benchmark training resnets..."
 
-docker run -it --rm -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train --algorithm resnet --batch_size 64 --train True --num_epochs 12
+docker run -it --rm -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train --algorithm resnet50 --batch_size 64 --train True --num_epochs 12
 
 echo "Copying resnet50..."
 

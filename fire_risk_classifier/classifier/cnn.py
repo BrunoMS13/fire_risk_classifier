@@ -9,9 +9,9 @@ from fire_risk_classifier.dataclasses.params import Params
 
 def get_cnn_model(params: Params) -> nn.Module:
     match params.algorithm:
-        case "resnet" | "resnet101" | "resnet152":
+        case "resnet50" | "resnet101" | "resnet152":
             return get_resnet_model(params)
-        case "densenet" | "densenet169" | "densenet201":
+        case "densenet161" | "densenet169" | "densenet201":
             return get_densenet_model(params)
         case "efficientnet_b4" | "efficientnet_b7":
             return get_efficientnet_model(params)
@@ -36,7 +36,7 @@ def get_classifier_model(params: Params, num_features: int) -> "Classifier":
 def get_resnet_model(params: Params) -> models.ResNet:
     algorithm = params.algorithm
     match algorithm:
-        case "resnet":
+        case "resnet50":
             logging.info("Using ResNet50 model.")
             base_model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
         case "resnet101":
@@ -59,7 +59,7 @@ def get_resnet_model(params: Params) -> models.ResNet:
 def get_densenet_model(params: Params) -> models.DenseNet:
     algorithm = params.algorithm
     match algorithm:
-        case "densenet":
+        case "densenet161":
             logging.info("Using DenseNet161 model.")
             base_model = models.densenet161(weights=models.DenseNet161_Weights.DEFAULT)
         case "densenet169":
@@ -86,10 +86,14 @@ def get_efficientnet_model(params: Params) -> models.EfficientNet:
     match algorithm:
         case "efficientnet_b4":
             logging.info("Using EfficientNetB4 model.")
-            base_model = models.efficientnet_b4(weights=models.EfficientNet_B4_Weights.DEFAULT)
+            base_model = models.efficientnet_b4(
+                weights=models.EfficientNet_B4_Weights.DEFAULT
+            )
         case "efficientnet_b7":
             logging.info("Using EfficientNetB7 model.")
-            base_model = models.efficientnet_b7(weights=models.EfficientNet_B7_Weights.DEFAULT)
+            base_model = models.efficientnet_b7(
+                weights=models.EfficientNet_B7_Weights.DEFAULT
+            )
 
     num_features = base_model.classifier[1].in_features
     __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=False)

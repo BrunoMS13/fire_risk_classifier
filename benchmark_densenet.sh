@@ -7,7 +7,7 @@ docker build -t fire_risk_classifier_image .
 
 echo "Benchmark training densenets..."
 
-docker run -it --rm -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train --algorithm densenet --batch_size 32 --train True --num_epochs 12
+docker run -it --rm -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train --algorithm densenet161 --batch_size 32 --train True --num_epochs 12
 
 echo "Copying densenet161..."
 
