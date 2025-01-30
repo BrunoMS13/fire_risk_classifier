@@ -13,7 +13,7 @@ def get_cnn_model(params: Params) -> nn.Module:
             return get_resnet_model(params)
         case "densenet161" | "densenet169" | "densenet201":
             return get_densenet_model(params)
-        case "efficientnet_b4" | "efficientnet_b7":
+        case "efficientnet_b4" | "efficientnet_b5" | "efficientnet_b6" | "efficientnet_b7":
             return get_efficientnet_model(params)
         case "vgg16" | "vgg19" | "vgg19_bn":
             return get_vgg_model(params)
@@ -88,6 +88,16 @@ def get_efficientnet_model(params: Params) -> models.EfficientNet:
             logging.info("Using EfficientNetB4 model.")
             base_model = models.efficientnet_b4(
                 weights=models.EfficientNet_B4_Weights.DEFAULT
+            )
+        case "efficientnet_b5":
+            logging.info("Using EfficientNetB5 model.")
+            base_model = models.efficientnet_b5(
+                weights=models.EfficientNet_B5_Weights.DEFAULT
+            )
+        case "efficientnet_b6":
+            logging.info("Using EfficientNetB6 model.")
+            base_model = models.efficientnet_b6(
+                weights=models.EfficientNet_B6_Weights.DEFAULT
             )
         case "efficientnet_b7":
             logging.info("Using EfficientNetB7 model.")

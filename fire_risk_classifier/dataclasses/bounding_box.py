@@ -24,6 +24,7 @@ class BoundingBox:
     def __str__(self):
         return f"{self.min_latitude},{self.min_longitude},{self.max_latitude},{self.max_longitude}"
 
+    @staticmethod
     def get_distance(lat1: int, lon1: int, lat2: int, lon2: int) -> float:
         """Distance between two points on Earth's surface using the Haversine formula."""
         R = 6371  # Earth radius in kilometers
@@ -36,5 +37,4 @@ class BoundingBox:
             + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
         )
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-        distance = R * c
-        return distance
+        return R * c
