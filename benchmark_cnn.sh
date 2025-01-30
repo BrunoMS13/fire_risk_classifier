@@ -114,3 +114,5 @@ cp -r $WEIGHTS_PATH/densenet201_body_2C.pth ~/models/3C/densenet201
 cp -r $WEIGHTS_PATH/densenet201_body_2C_metrics.json ~/models/3C/densenet201
 
 echo "Benchmark trainings complete!"
+
+docker rmi fire_risk_classifier_image
