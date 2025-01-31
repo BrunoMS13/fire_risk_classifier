@@ -2,6 +2,7 @@
 images/
 fire_risk_classifier/data/csvs/house_points_bb50m.csv
 fire_risk_classifier/data/csvs/house_points_bb62_5m.csv
+fire_risk_classifier/data/cnn_checkpoint_weights
 
 # ignore pyc files
 *.pyc
