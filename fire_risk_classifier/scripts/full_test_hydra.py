@@ -6,7 +6,7 @@ from fire_risk_classifier.dataclasses.params import Params
 model_names = [
     "densenet_body_2C.pth",
     "densenet169_body_2C.pth",
-    "densenet201_body_2C.pth"
+    "densenet201_body_2C.pth",
     # "densenet_NCW_FT_final_model.pth",
     # "resnet_CW_FT_final_model.pth",
     # "resnet_NCW_FT_final_model.pth",
@@ -34,7 +34,7 @@ def get_predictions(model: str, params: Params) -> list:
     return pipeline.test_cnn(plot_confusion_matrix=False)
 
 
-def get_params(is_irg: bool) -> Params:
+def get_params(is_irg: bool, num_classes: int) -> Params:
     params = Params()
 
     base_path = "fire_risk_classifier/data/cnn_checkpoint_weights/"

@@ -3,7 +3,7 @@ echo "Building Image..."
 WEIGHTS_PATH="/tmp/fire_risk_classifier/fire_risk_classifier/data/cnn_checkpoint_weights"
 DOCKER_WEIGHTS_PATH="/app/fire_risk_classifier/data/cnn_checkpoint_weights"
 
-NUM_CLASSES=2
+NUM_CLASSES=3
 mkdir -p ~/models/2C
 
 docker build -t fire_risk_classifier_image .
