@@ -75,19 +75,19 @@ class Pipeline:
         batch_size = self.params.batch_size_cnn
 
         if self.params.train_cnn:
-            self.__init_train_dataloader(directories, batch_size)
+            self.__init_train_and_val_dataloaders(directories, batch_size)
 
         if self.params.test_cnn:
             self.__init_test_dataloader(directories, batch_size)
 
-    def __init_train_dataloader(self, directories: dict[str, str], batch_size: int):
+    def __init_train_and_val_dataloaders(self, directories: dict[str, str], batch_size: int):
         if self.params.train_cnn:
             transform = transforms.Compose([
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomVerticalFlip(),
                 transforms.RandomRotation(20),
                 transforms.ToTensor(),
-                transforms.Normalize([0.5113, 0.4098, 0.3832], [0.1427, 0.1708, 0.1416]),  # Fixed values
+                transforms.Normalize([0.5113, 0.4098, 0.3832], [0.1427, 0.1708, 0.1416]),
             ])
 
             # Training data loader
@@ -98,14 +98,24 @@ class Pipeline:
                 ndvi_index=self.params.calculate_ndvi_index,
                 normalize_transform=self.__get_normalize_transform(),
             )
+            train_size = int(0.8 * len(self.dataset))
+            val_size = len(self.dataset) - train_size
+            train_dataset, val_dataset = torch.utils.data.random_split(self.dataset, [train_size, val_size])
+
+            # Assign training dataloader (80% data)
             self.data_loader = DataLoader(
-                self.dataset, batch_size=batch_size, shuffle=True
+                train_dataset, batch_size=batch_size, shuffle=True
+            )
+
+            # Assign validation dataloader (20% data)
+            self.val_data_loader = DataLoader(
+                val_dataset, batch_size=batch_size, shuffle=False
             )
 
     def __init_test_dataloader(self, directories: dict[str, str], batch_size: int):
         transform = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize([0.5113, 0.4098, 0.3832], [0.1427, 0.1708, 0.1416]),  # Use the same as train
+            transforms.Normalize([0.5113, 0.4098, 0.3832], [0.1427, 0.1708, 0.1416]),
         ])
 
         # Testing data loader
@@ -142,15 +152,19 @@ class Pipeline:
 
         # Load saved model weights
         self.__load_model_weights(model)
-        epoch_data = {"loss": [], "accuracy": []}
+        epoch_data = {"train_loss": [], "train_accuracy": [], "val_loss": [], "val_accuracy": []}
+
 
         for epoch in range(self.params.cnn_epochs):
             self.current_epoch = epoch
             loss, accuracy = self.__training_step(
                 epoch, model, optimizer, scheduler, criterion
             )
-            epoch_data["loss"].append(loss)
-            epoch_data["accuracy"].append(accuracy)
+            val_loss, val_accuracy = self.__validation_step(model, criterion)
+            epoch_data["train_loss"].append(loss)
+            epoch_data["train_accuracy"].append(accuracy)
+            epoch_data["val_loss"].append(val_loss)
+            epoch_data["val_accuracy"].append(val_accuracy)
             torch.cuda.empty_cache()
 
         self.__save_model(model, epoch_data)
@@ -352,3 +366,37 @@ class Pipeline:
         plt.ylabel("True Labels")
         plt.title("Confusion Matrix")
         plt.show()
+
+    def __validation_step(self, model: nn.Module, criterion: nn.Module) -> tuple:
+        model.eval()  # Set model to evaluation mode
+
+        total_samples = 0
+        running_loss = 0.0
+        correct_predictions = 0
+
+        with torch.no_grad():
+            for step, (images, labels) in enumerate(self.val_data_loader):
+                images, labels = images.to(self.device), labels.to(self.device)
+
+                outputs = model(images)
+                loss = criterion(outputs, labels.unsqueeze(1).float())  # Ensure labels match shape
+
+                running_loss += loss.item()
+
+                if self.params.num_labels > 2:
+                    predicted = torch.argmax(outputs, dim=1)  # Multi-class
+                else:
+                    predicted = (torch.sigmoid(outputs) >= 0.5).float()  # Binary classification
+
+                correct_predictions += (predicted.view(-1) == labels.view(-1)).sum().item()
+                total_samples += labels.size(0)
+
+                logging.info(
+                    f"Validation Step [{step + 1}/{len(self.val_data_loader)}], "
+                    f"Loss: {running_loss / (step + 1):.4f}, "
+                    f"Accuracy: {100 * correct_predictions / total_samples:.2f}%"
+                )
+
+        avg_loss = running_loss / len(self.val_data_loader)
+        accuracy = 100 * correct_predictions / total_samples
+        return avg_loss, accuracy
