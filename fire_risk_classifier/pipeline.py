@@ -145,7 +145,7 @@ class Pipeline:
 
     def train_cnn(self):
         model = get_cnn_model(self.params).to(self.device)
-        optimizer = optim.Adam(model.parameters(), lr=3e-5, weight_decay=1e-4)
+        optimizer = optim.Adam(model.parameters(), lr=5e-5, weight_decay=1e-4)
         self.current_epoch = 0
 
         criterion = self.__get_criterion()
@@ -317,28 +317,33 @@ class Pipeline:
 
     def __get_scheduler(self, optimizer: optim.Optimizer) -> LambdaLR:
         def lr_lambda(step: int) -> float:
-            if self.params.lr_mode == "progressive_drops":
-                if self.current_epoch >= int(0.75 * self.params.cnn_epochs):
-                    return 0.01
-                return (
-                    0.1
-                    if self.current_epoch >= int(0.45 * self.params.cnn_epochs)
-                    else 1
-                )
+            epoch_fraction = self.current_epoch / self.params.cnn_epochs  # How far along training is
+
+            if epoch_fraction < 0.3:  # First 30% of epochs → Keep high LR
+                return 1.0  # Full LR
+            elif epoch_fraction < 0.6:  # 30-60% of epochs → Reduce LR moderately
+                return 0.5  # Half LR
+            elif epoch_fraction < 0.85:  # 60-85% → Reduce further
+                return 0.2  # 20% of original LR
+            else:  # Last 15% → Very low LR for fine-tuning
+                return 0.05  # 5% of original LR
 
         def lr_lambda_for_fine_tuning(step: int) -> float:
-            if self.params.lr_mode == "progressive_drops":
-                if self.current_epoch >= int(0.75 * self.params.cnn_epochs):
-                    return 0.01
-                return (
-                    0.1
-                    if self.current_epoch >= int(0.15 * self.params.cnn_epochs)
-                    else 1
-                )
+            epoch_fraction = self.current_epoch / self.params.cnn_epochs
+
+            if epoch_fraction < 0.2:  # First 20% → Normal LR
+                return 1.0
+            elif epoch_fraction < 0.5:  # 20-50% → Drop gradually
+                return 0.3
+            elif epoch_fraction < 0.8:  # 50-80% → Lower LR further
+                return 0.1
+            else:  # Last 20% → Tiny LR for fine-tuning
+                return 0.02
 
         if self.params.fine_tunning:
             return LambdaLR(optimizer, lr_lambda=lr_lambda_for_fine_tuning)
         return LambdaLR(optimizer, lr_lambda=lr_lambda)
+
 
     def __get_criterion(self) -> nn.Module:
         if self.params.class_weights:
