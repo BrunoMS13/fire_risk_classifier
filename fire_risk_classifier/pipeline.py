@@ -381,7 +381,7 @@ class Pipeline:
         correct_predictions = 0
 
         with torch.no_grad():
-            for step, (images, labels) in enumerate(self.val_data_loader):
+            for images, labels in self.val_data_loader:
                 images, labels = images.to(self.device), labels.to(self.device)
 
                 outputs = model(images)
@@ -389,20 +389,15 @@ class Pipeline:
 
                 running_loss += loss.item()
 
-                if self.params.num_labels > 2:
-                    predicted = torch.argmax(outputs, dim=1)  # Multi-class
-                else:
-                    predicted = (torch.sigmoid(outputs) >= 0.5).float()  # Binary classification
-
+                predicted = (
+                    torch.argmax(outputs, dim=1)
+                    if self.params.num_labels > 2
+                    else (torch.sigmoid(outputs) >= 0.5).float()
+                )
                 correct_predictions += (predicted.view(-1) == labels.view(-1)).sum().item()
                 total_samples += labels.size(0)
 
-                logging.info(
-                    f"Validation Step [{step + 1}/{len(self.val_data_loader)}], "
-                    f"Loss: {running_loss / (step + 1):.4f}, "
-                    f"Accuracy: {100 * correct_predictions / total_samples:.2f}%"
-                )
-
         avg_loss = running_loss / len(self.val_data_loader)
         accuracy = 100 * correct_predictions / total_samples
+        logging.info(f"Validation Loss: {avg_loss:.4f}", f"Validation Accuracy: {accuracy:.2f}%")
         return avg_loss, accuracy
