@@ -145,7 +145,7 @@ class Pipeline:
 
     def train_cnn(self):
         model = get_cnn_model(self.params).to(self.device)
-        optimizer = optim.Adam(model.parameters(), lr=5e-5, weight_decay=1e-4)
+        optimizer = optim.Adam(model.parameters(), lr=5e-5, weight_decay=5e-4)
         self.current_epoch = 0
 
         criterion = self.__get_criterion()
