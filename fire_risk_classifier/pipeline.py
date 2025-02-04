@@ -85,7 +85,8 @@ class Pipeline:
             transform = transforms.Compose([
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomVerticalFlip(),
-                transforms.RandomRotation(20),
+                transforms.RandomRotation(30),
+                transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
                 transforms.ToTensor(),
                 transforms.Normalize([0.5113, 0.4098, 0.3832], [0.1427, 0.1708, 0.1416]),
             ])
@@ -144,7 +145,7 @@ class Pipeline:
 
     def train_cnn(self):
         model = get_cnn_model(self.params).to(self.device)
-        optimizer = optim.Adam(model.parameters(), lr=1e-4)
+        optimizer = optim.Adam(model.parameters(), lr=3e-5, weight_decay=1e-4)
         self.current_epoch = 0
 
         criterion = self.__get_criterion()
