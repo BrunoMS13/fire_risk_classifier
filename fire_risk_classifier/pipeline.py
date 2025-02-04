@@ -399,5 +399,5 @@ class Pipeline:
 
         avg_loss = running_loss / len(self.val_data_loader)
         accuracy = 100 * correct_predictions / total_samples
-        logging.info(f"Validation Loss: {avg_loss:.4f}", f"Validation Accuracy: {accuracy:.2f}%")
+        logging.info(f"Validation Loss: {avg_loss:.4f} | Validation Accuracy: {accuracy:.2f}%")
         return avg_loss, accuracy
