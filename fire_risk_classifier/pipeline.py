@@ -145,30 +145,45 @@ class Pipeline:
 
     def train_cnn(self):
         model = get_cnn_model(self.params).to(self.device)
-        optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=3e-4)
+        optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=3e-4)
         self.current_epoch = 0
 
         criterion = self.__get_criterion()
         scheduler = self.__get_scheduler(optimizer)
 
+        best_val_acc = 0
+        early_stop_counter = 0
+
         # Load saved model weights
         self.__load_model_weights(model)
         epoch_data = {"train_loss": [], "train_accuracy": [], "val_loss": [], "val_accuracy": []}
-
+        temp_best_model = None
 
         for epoch in range(self.params.cnn_epochs):
             self.current_epoch = epoch
-            loss, accuracy = self.__training_step(
-                epoch, model, optimizer, scheduler, criterion
-            )
+            self.__gradual_unfreeze(model)
+
+            loss, accuracy = self.__training_step(epoch, model, optimizer, scheduler, criterion)
             val_loss, val_accuracy = self.__validation_step(model, criterion)
+
             epoch_data["train_loss"].append(loss)
             epoch_data["train_accuracy"].append(accuracy)
             epoch_data["val_loss"].append(val_loss)
             epoch_data["val_accuracy"].append(val_accuracy)
             torch.cuda.empty_cache()
 
-        self.__save_model(model, epoch_data)
+            if val_accuracy > best_val_acc:
+                best_val_acc = val_accuracy
+                early_stop_counter = 0
+                temp_best_model = model
+            else:
+                early_stop_counter += 1
+
+            if early_stop_counter >= self.patience:
+                print(f"Early stopping at Epoch {epoch+1} (Best Val Accuracy: {best_val_acc:.2f}%)")
+                break
+
+        self.__save_model(temp_best_model, epoch_data)
 
     def __save_model(self, model: nn.Module, epoch_data: dict):
         # Save model
@@ -321,9 +336,9 @@ class Pipeline:
 
             if epoch_fraction < 0.3:  # First 30% of epochs → Keep high LR
                 return 1.0  # Full LR
-            elif epoch_fraction < 0.6:  # 30-60% of epochs → Reduce LR moderately
+            elif epoch_fraction < 0.55:  # 30-60% of epochs → Reduce LR moderately
                 return 0.5  # Half LR
-            elif epoch_fraction < 0.85:  # 60-85% → Reduce further
+            elif epoch_fraction < 0.8:  # 60-85% → Reduce further
                 return 0.2  # 20% of original LR
             else:  # Last 15% → Very low LR for fine-tuning
                 return 0.05  # 5% of original LR
@@ -401,3 +416,34 @@ class Pipeline:
         accuracy = 100 * correct_predictions / total_samples
         logging.info(f"Validation Loss: {avg_loss:.4f} | Validation Accuracy: {accuracy:.2f}%")
         return avg_loss, accuracy
+    
+    def __gradual_unfreeze(self, model: nn.Module):
+        # Divide your EfficientNet feature extractor into "blocks" or groups of layers
+        layer_groups = [
+            model.features[:3],   # early blocks
+            model.features[3:6],  # middle blocks
+            model.features[6:],   # deeper blocks
+        ]
+        
+        # First, freeze all feature-extraction layers
+        for group in layer_groups:
+            for param in group.parameters():
+                param.requires_grad = False
+        
+        # Always leave the classifier head trainable
+        for param in model.classifier.parameters():
+            param.requires_grad = True
+        
+        # Gradually unfreeze each block group at specific epochs
+        # Example schedule: unfreeze first group at epoch >=2, second at >=4, final at >=6
+        if self.current_epoch >= 2:
+            for param in layer_groups[0].parameters():
+                param.requires_grad = True
+        
+        if self.current_epoch >= 4:
+            for param in layer_groups[1].parameters():
+                param.requires_grad = True
+        
+        if self.current_epoch >= 6:
+            for param in layer_groups[2].parameters():
+                param.requires_grad = True

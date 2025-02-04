@@ -6,7 +6,7 @@ from collections import defaultdict
 
 
 RANDOM_SEED = 15
-TRAIN_RATIO = 0.7
+TRAIN_RATIO = 0.9
 
 low_risk = [0, 1]
 medium_risks = [2]
