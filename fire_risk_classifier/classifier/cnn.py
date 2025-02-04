@@ -8,7 +8,9 @@ from fire_risk_classifier.dataclasses.params import Params
 
 
 def get_cnn_model(params: Params) -> nn.Module:
-    match params.algorithm:
+    algorithm = params.algorithm
+    logging.info(f"Using {algorithm} model.")
+    match algorithm:
         case "resnet50" | "resnet101" | "resnet152":
             return get_resnet_model(params)
         case "densenet161" | "densenet169" | "densenet201":
@@ -18,8 +20,8 @@ def get_cnn_model(params: Params) -> nn.Module:
         case "vgg16" | "vgg19" | "vgg19_bn":
             return get_vgg_model(params)
         case _:
-            raise ValueError(f"Invalid algorithm: {params.algorithm}")
-    raise ValueError(f"Invalid algorithm: {params.algorithm}")
+            raise ValueError(f"Invalid algorithm: {algorithm}")
+    raise ValueError(f"Invalid algorithm: {algorithm}")
 
 
 def get_classifier_model(params: Params, num_features: int) -> "Classifier":
@@ -37,13 +39,10 @@ def get_resnet_model(params: Params) -> models.ResNet:
     algorithm = params.algorithm
     match algorithm:
         case "resnet50":
-            logging.info("Using ResNet50 model.")
             base_model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
         case "resnet101":
-            logging.info("Using ResNet101 model.")
             base_model = models.resnet101(weights=models.ResNet101_Weights.DEFAULT)
         case "resnet152":
-            logging.info("Using ResNet152 model.")
             base_model = models.resnet152(weights=models.ResNet152_Weights.DEFAULT)
     num_features = base_model.fc.in_features
 
@@ -60,13 +59,10 @@ def get_densenet_model(params: Params) -> models.DenseNet:
     algorithm = params.algorithm
     match algorithm:
         case "densenet161":
-            logging.info("Using DenseNet161 model.")
             base_model = models.densenet161(weights=models.DenseNet161_Weights.DEFAULT)
         case "densenet169":
-            logging.info("Using DenseNet169 model.")
             base_model = models.densenet169(weights=models.DenseNet169_Weights.DEFAULT)
         case "densenet201":
-            logging.info("Using DenseNet201 model.")
             base_model = models.densenet201(weights=models.DenseNet201_Weights.DEFAULT)
         case _:
             raise ValueError(f"Invalid algorithm: {algorithm}")
@@ -85,22 +81,18 @@ def get_efficientnet_model(params: Params) -> models.EfficientNet:
     algorithm = params.algorithm
     match algorithm:
         case "efficientnet_b4":
-            logging.info("Using EfficientNetB4 model.")
             base_model = models.efficientnet_b4(
                 weights=models.EfficientNet_B4_Weights.DEFAULT
             )
         case "efficientnet_b5":
-            logging.info("Using EfficientNetB5 model.")
             base_model = models.efficientnet_b5(
                 weights=models.EfficientNet_B5_Weights.DEFAULT
             )
         case "efficientnet_b6":
-            logging.info("Using EfficientNetB6 model.")
             base_model = models.efficientnet_b6(
                 weights=models.EfficientNet_B6_Weights.DEFAULT
             )
         case "efficientnet_b7":
-            logging.info("Using EfficientNetB7 model.")
             base_model = models.efficientnet_b7(
                 weights=models.EfficientNet_B7_Weights.DEFAULT
             )
@@ -108,7 +100,11 @@ def get_efficientnet_model(params: Params) -> models.EfficientNet:
     num_features = base_model.classifier[1].in_features
     __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=False)
 
-    base_model.classifier[1] = get_classifier_model(params, num_features)
+    if isinstance(base_model.classifier, nn.Linear):
+        base_model.classifier = get_classifier_model(params, num_features)
+    else:
+        base_model.classifier[1] = get_classifier_model(params, num_features)
+
     return base_model
 
 
@@ -116,13 +112,10 @@ def get_vgg_model(params: Params) -> models.VGG:
     algorithm = params.algorithm
     match algorithm:
         case "vgg16":
-            logging.info("Using VGG16 model.")
             base_model = models.vgg16(weights=models.VGG16_Weights.DEFAULT)
         case "vgg19":
-            logging.info("Using VGG19 model.")
             base_model = models.vgg19(weights=models.VGG19_Weights.DEFAULT)
         case "vgg19_bn":
-            logging.info("Using VGG19_bn model.")
             base_model = models.vgg19_bn(weights=models.VGG19_BN_Weights.DEFAULT)
 
     num_features = base_model.classifier[6].in_features
@@ -132,32 +125,65 @@ def get_vgg_model(params: Params) -> models.VGG:
     return base_model
 
 
-def __adapt_model(
-    calculate_ndvi_index: bool, base_model: nn.Module, freeze_layers: bool
-):
+def __adapt_model(calculate_ndvi_index: bool, base_model: nn.Module, freeze_layers: bool = True):
     if calculate_ndvi_index:
         __adapt_model_to_ndvi(base_model)
 
     for param in base_model.parameters():
         param.requires_grad = not freeze_layers
 
+    # Ensure BatchNorm layers are trainable
+    for module in base_model.modules():
+        if isinstance(module, nn.BatchNorm2d):
+            for param in module.parameters():
+                param.requires_grad = True
 
-def __adapt_model_to_ndvi(self, base_model: nn.Module):
-    original_conv0 = base_model.features.conv0
-    base_model.features.conv0 = nn.Conv2d(
+
+
+def __adapt_model_to_ndvi(base_model: nn.Module):
+    """
+    Modify the first convolutional layer of the CNN to accept 4 input channels instead of 3 (RGB + NDVI).
+    """
+    first_layer = None
+
+    # Identify the first layer based on model type
+    if isinstance(base_model, models.ResNet):
+        first_layer = base_model.conv1
+    elif isinstance(base_model, models.DenseNet):
+        first_layer = base_model.features.conv0
+    elif isinstance(base_model, models.EfficientNet):
+        first_layer = base_model.features[0]
+    elif isinstance(base_model, models.VGG):
+        first_layer = base_model.features[0]
+
+    if first_layer is None:
+        raise ValueError("Unsupported model type for NDVI adaptation.")
+
+    # Create a new conv layer with 4 input channels
+    new_conv = nn.Conv2d(
         in_channels=4,
-        out_channels=original_conv0.out_channels,
-        kernel_size=original_conv0.kernel_size,
-        stride=original_conv0.stride,
-        padding=original_conv0.padding,
-        bias=False,
+        out_channels=first_layer.out_channels,
+        kernel_size=first_layer.kernel_size,
+        stride=first_layer.stride,
+        padding=first_layer.padding,
+        bias=False
     )
-    # Initialize weights for the new channel
+
+    # Initialize weights: Copy RGB weights & duplicate Red weights for NDVI
     with torch.no_grad():
-        # Copy RGB weights
-        base_model.features.conv0.weight[:, :3, :, :] = original_conv0.weight
-        # Copy NIR weights
-        base_model.features.conv0.weight[:, 3, :, :] = original_conv0.weight[:, 0, :, :]
+        new_conv.weight[:, :3, :, :] = first_layer.weight
+        new_conv.weight[:, 3, :, :] = first_layer.weight[:, 0, :, :]  # Copy red channel weights to NDVI
+
+    # Replace the old conv layer
+    if isinstance(base_model, models.ResNet):
+        base_model.conv1 = new_conv
+    elif isinstance(base_model, models.DenseNet):
+        base_model.features.conv0 = new_conv
+    elif isinstance(base_model, models.EfficientNet):
+        base_model.features[0] = new_conv
+    elif isinstance(base_model, models.VGG):
+        base_model.features[0] = new_conv
+
 
 
 class Classifier(nn.Module):
@@ -172,8 +198,8 @@ class Classifier(nn.Module):
         self.relu2 = nn.ReLU()
         self.dropout2 = nn.Dropout(0.5)
 
-        self.fc3 = nn.Linear(hidden_size, num_classes)
-        self.softmax = nn.Softmax(dim=1)
+        self.fc3 = nn.Linear(hidden_size, 1)
+
 
     def forward(self, x):
         # Forward pass through layers
@@ -186,6 +212,5 @@ class Classifier(nn.Module):
         x = self.dropout2(x)
 
         x = self.fc3(x)
-        x = self.softmax(x)
 
         return x

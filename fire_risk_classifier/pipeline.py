@@ -82,14 +82,13 @@ class Pipeline:
 
     def __init_train_dataloader(self, directories: dict[str, str], batch_size: int):
         if self.params.train_cnn:
-            transform = transforms.Compose(
-                [
-                    transforms.RandomHorizontalFlip(),
-                    transforms.RandomVerticalFlip(),
-                    transforms.RandomRotation(20),
-                    transforms.ToTensor(),
-                ]
-            )
+            transform = transforms.Compose([
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomVerticalFlip(),
+                transforms.RandomRotation(20),
+                transforms.ToTensor(),
+                transforms.Normalize([0.5113, 0.4098, 0.3832], [0.1427, 0.1708, 0.1416]),  # Fixed values
+            ])
 
             # Training data loader
             self.dataset = CustomImageDataset(
@@ -104,12 +103,11 @@ class Pipeline:
             )
 
     def __init_test_dataloader(self, directories: dict[str, str], batch_size: int):
-        transform = transforms.Compose(
-            [
-                transforms.ToTensor(),
-                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-            ]
-        )
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize([0.5113, 0.4098, 0.3832], [0.1427, 0.1708, 0.1416]),  # Use the same as train
+        ])
+
         # Testing data loader
         self.test_dataset = CustomImageDataset(
             directories["images_directory"],
@@ -123,13 +121,13 @@ class Pipeline:
         )
 
     def __get_normalize_transform(self) -> transforms.Normalize:
+        dataset_mean = [0.5113, 0.4098, 0.3832]
+        dataset_std = [0.1427, 0.1708, 0.1416]
+        
         return (
-            transforms.Normalize(
-                mean=(0.5, 0.5, 0.5, 0.0),
-                std=(0.5, 0.5, 0.5, 1.0),
-            )
+            transforms.Normalize(mean=dataset_mean + [0.0], std=dataset_std + [1.0])
             if self.params.calculate_ndvi_index
-            else transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            else transforms.Normalize(mean=dataset_mean, std=dataset_std)
         )
 
     # ------------------- Training and Testing ------------------- #
@@ -209,7 +207,7 @@ class Pipeline:
 
             optimizer.zero_grad()
             outputs = model(images)
-            loss = criterion(outputs, labels)
+            loss = criterion(outputs, labels.unsqueeze(1).float())
             loss.backward()
             optimizer.step()
             scheduler.step()
@@ -217,8 +215,12 @@ class Pipeline:
             running_loss += loss.item()
 
             with torch.no_grad():
-                _, predicted = torch.max(outputs.data, 1)
-                correct_predictions += (predicted == labels).sum().item()
+                if self.params.num_labels > 2:
+                    predicted = torch.argmax(outputs, dim=1)
+                else:
+                    predicted = (torch.sigmoid(outputs) >= 0.5).float()
+
+                correct_predictions += (predicted.view(-1) == labels.view(-1)).sum().item()
                 total_samples += labels.size(0)
 
             logging.info(
@@ -233,10 +235,10 @@ class Pipeline:
         accuracy = 100 * correct_predictions / total_samples
         return avg_loss, accuracy
 
-    def test_cnn(self, plot_confusion_matrix: bool = True) -> list[int]:
+    def test_cnn(self, plot_confusion_matrix: bool = True, log_info: bool = True) -> list[int]:
         model = get_cnn_model(self.params).to(self.device)
-        model.eval()
-        criterion = nn.CrossEntropyLoss()
+        model.train(mode=False)
+        criterion = self.__get_criterion()
 
         # Load saved model weights
         self.__load_model_weights(model)
@@ -256,10 +258,14 @@ class Pipeline:
                 images, labels = images.to(self.device), labels.to(self.device)
 
                 outputs = model(images)
-                loss = criterion(outputs, labels)
+                loss = criterion(outputs, labels.unsqueeze(1).float())
                 total_loss += loss.item()
 
-                _, predicted = torch.max(outputs.data, 1)
+                if self.params.num_labels > 2:
+                    predicted = torch.argmax(outputs, dim=1)  # Multi-class
+                else:
+                    predicted = (torch.sigmoid(outputs) >= 0.5).float()  # Binary classification
+
                 correct_predictions += (predicted == labels).sum().item()
                 total_samples += labels.size(0)
 
@@ -267,7 +273,7 @@ class Pipeline:
                 all_labels.extend(labels.cpu().numpy())
                 all_predictions.extend(predicted.cpu().numpy())
 
-                if step % 10 == 0:
+                if step % 10 == 0 and log_info:
                     logging.info(
                         f"Test Step [{step + 1}/{len(self.test_data_loader)}], "
                         f"Loss: {total_loss / (step + 1):.4f}, "
@@ -320,12 +326,16 @@ class Pipeline:
         return LambdaLR(optimizer, lr_lambda=lr_lambda)
 
     def __get_criterion(self) -> nn.Module:
-        criterion = nn.CrossEntropyLoss()
         if self.params.class_weights:
             class_weights = self.dataset.get_class_weights_tensor().to(self.device)
             logging.info(f"Using class weights: {class_weights}")
-            criterion.weight = class_weights
-        return criterion
+
+            if self.params.num_labels > 2:
+                return nn.CrossEntropyLoss(weight=class_weights)
+            return nn.BCEWithLogitsLoss(pos_weight=class_weights)
+
+        return nn.CrossEntropyLoss() if self.params.num_labels > 2 else nn.BCEWithLogitsLoss()
+
 
     def __plot_confusion_matrix(self, all_labels: list, all_predictions: list):
         cm = confusion_matrix(all_labels, all_predictions)

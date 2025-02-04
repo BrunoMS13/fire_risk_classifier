@@ -4,16 +4,12 @@ from fire_risk_classifier.utils.logger import Logger
 from fire_risk_classifier.dataclasses.params import Params
 
 model_names = [
-    "densenet_body_2C.pth",
-    "densenet169_body_2C.pth",
-    "densenet201_body_2C.pth",
-    # "densenet_NCW_FT_final_model.pth",
-    # "resnet_CW_FT_final_model.pth",
-    # "resnet_NCW_FT_final_model.pth",
+    "efficientnet_b4_body_2C.pth",
 ]
 
-CALCULATE_IRG = False
-CALCULATE_RGB = True
+NUM_CLASSES = 2
+CALCULATE_IRG = True
+CALCULATE_RGB = False
 
 
 def majority_vote(all_predictions_list):
@@ -24,28 +20,28 @@ def majority_vote(all_predictions_list):
 
 def get_predictions(model: str, params: Params) -> list:
     """Runs the pipeline synchronously and gets predictions."""
-    algo = model.split("_")[0]
+    algo = model.split("_body")[0]
     args = {
         "test": True,
+        "train": True,
         "algorithm": algo,
         "load_weights": model,
     }
     pipeline = Pipeline(params=params, args=args)
-    return pipeline.test_cnn(plot_confusion_matrix=False)
+    return pipeline.test_cnn(plot_confusion_matrix=False, log_info=False)
 
 
-def get_params(is_irg: bool, num_classes: int) -> Params:
+def get_params(is_irg: bool) -> Params:
     params = Params()
 
-    base_path = "fire_risk_classifier/data/cnn_checkpoint_weights/"
-    params.directories["cnn_checkpoint_weights"] = (
-        f"{base_path}IRG_2C/" if is_irg else f"{base_path}RGB_2C/"
-    )
+    base_path = "fire_risk_classifier/data/cnn_checkpoint_weights"
+    colorspace = "IRG" if is_irg else "RGB"
+    checkpoint_path = f"{base_path}/{colorspace}/{NUM_CLASSES}C"
+    params.directories["cnn_checkpoint_weights"] = checkpoint_path
 
     base_images_path = "fire_risk_classifier/data/images/"
     params.directories["images_directory"] = (
-        f"{base_images_path}ortos2018-IRG-62_5m-decompressed"
-        if is_irg
+        f"{base_images_path}ortos2018-IRG-62_5m-decompressed" if is_irg
         else f"{base_images_path}ortos2018-RGB-62_5m-decompressed"
     )
 

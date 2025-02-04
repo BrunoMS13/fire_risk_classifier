@@ -3,18 +3,27 @@ echo "Building Image..."
 WEIGHTS_PATH="/tmp/fire_risk_classifier/fire_risk_classifier/data/cnn_checkpoint_weights"
 DOCKER_WEIGHTS_PATH="/app/fire_risk_classifier/data/cnn_checkpoint_weights"
 
-NUM_CLASSES=3
+NUM_CLASSES=2
 mkdir -p ~/models/2C
 
 docker build -t fire_risk_classifier_image .
 
+docker run -it --rm -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train --algorithm efficientnet_b5 --batch_size 64 --train True --num_epochs 12 --num_classes $NUM_CLASSES
+
+echo "Copying efficientnet_b5..."
+
+mkdir -p ~/models/3C/efficientnet_b5
+cp -r $WEIGHTS_PATH/efficientnet_b5_body_2C.pth ~/models/3C/efficientnet_b5
+cp -r $WEIGHTS_PATH/efficientnet_b5_body_2C_metrics.json ~/models/3C/efficientnet_b5
+
+: '
 echo "Benchmark training resnets..."
 
 docker run -it --rm -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train --algorithm resnet50 --batch_size 64 --train True --num_epochs 12 --num_classes $NUM_CLASSES
 
 echo "Copying resnet50..."
 
-mkdir -p ~/models/3C/resnet50
+mkdir -p ~/models/2C/resnet50
 cp -r $WEIGHTS_PATH/resnet50_body_2C.pth ~/models/3C/resnet50
 cp -r $WEIGHTS_PATH/resnet50_body_2C_metrics.json ~/models/3C/resnet50
 
@@ -51,6 +60,7 @@ echo "Copying vgg19_bn..."
 mkdir -p ~/models/3C/vgg19_bn
 cp -r $WEIGHTS_PATH/vgg19_bn_body_2C.pth ~/models/3C/vgg19_bn
 cp -r $WEIGHTS_PATH/vgg19_bn_body_2C_metrics.json ~/models/3C/vgg19_bn
+
 
 echo "Benchmark training efficientnets..."
 
@@ -112,6 +122,7 @@ echo "Copying densenet201..."
 mkdir -p ~/models/3C/densenet201
 cp -r $WEIGHTS_PATH/densenet201_body_2C.pth ~/models/3C/densenet201
 cp -r $WEIGHTS_PATH/densenet201_body_2C_metrics.json ~/models/3C/densenet201
+'
 
 echo "Benchmark trainings complete!"
 

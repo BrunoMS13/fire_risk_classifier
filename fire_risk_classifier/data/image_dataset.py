@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 from torch.utils.data import Dataset
-from matplotlib import pyplot as plt
 from torchvision.io import read_image
 import torchvision.transforms as transforms
+import matplotlib.pyplot as plt
 
 
 class CustomImageDataset(Dataset):
@@ -19,14 +19,13 @@ class CustomImageDataset(Dataset):
         ndvi_index: bool = False,
         task: str = "classification",
     ):
-
         self.img_labels = pd.read_csv(annotations_file)
-        classes = sorted(self.img_labels.iloc[:, 1].unique())
+        self.img_labels_dict = {row[0]: row[1] for row in self.img_labels.itertuples(index=False)}
 
+        classes = sorted(self.img_labels.iloc[:, 1].unique())
         self.img_dir = img_dir
         self.transform = transform
         self.normalize_transform = normalize_transform
-
         self.task = task.lower()
         self.ndvi_index = ndvi_index
 
@@ -34,43 +33,53 @@ class CustomImageDataset(Dataset):
         self.class2idx = {self.classes[i]: i for i in range(len(self.classes))}
         self.idx2class = {i: self.classes[i] for i in range(len(self.classes))}
 
+        # Compute NDVI statistics
+        self.ndvi_mean, self.ndvi_std = self.__compute_ndvi_stats()
+
     def __len__(self):
         return len(self.img_labels)
 
     def __getitem__(self, idx: int):
         img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0] + ".png")
         image = Image.open(img_path).convert("RGB")
+
         if self.task == "classification":
-            label = self.class2idx[self.img_labels.iloc[idx, 1]]
+            label = self.class2idx[self.img_labels_dict[self.img_labels.iloc[idx, 0]]]
         else:
             raise ValueError('Task can only be "classification"')
 
+        # Apply transforms before NDVI
         if self.transform:
             image = self.transform(image)
 
+        # Compute NDVI before normalizing
         if self.ndvi_index:
-            image = self.__get_image_with_ndvi_index(image)
+            ndvi = self.__compute_ndvi(image)
+            image = torch.cat((image, ndvi.unsqueeze(0)), dim=0)
 
-        image = self.normalize_transform(image)
+        # Normalize
+        if self.normalize_transform:
+            image = self.normalize_transform(image)
 
         return image, label
 
-    def __get_image_with_ndvi_index(self, image):
+    def __compute_ndvi(self, image):
         infrared = image[0, :, :]
         red = image[2, :, :]
-
-        # NDVI = (NIR - RED) / (NIR + RED) adding epsilon to avoid division by zero.
         epsilon = 1e-6
         ndvi = (infrared - red) / (infrared + red + epsilon)
-        return torch.cat((image, ndvi.unsqueeze(0)), dim=0)
+        return (ndvi - self.ndvi_mean) / self.ndvi_std
 
-    def show(self, idx: int):
-        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0] + ".png")
-        image = read_image(img_path)
-        plt.imshow(image.permute(1, 2, 0))
-        plt.axis("off")
-        plt.title(self.img_labels.iloc[idx, 1])
-        plt.show()
+    def __compute_ndvi_stats(self):
+        ndvi_values = []
+        for i in range(len(self)):
+            img, _ = self[i]  # Get image tensor
+            infrared = img[0, :, :].numpy().flatten()
+            red = img[2, :, :].numpy().flatten()
+            ndvi = (infrared - red) / (infrared + red + 1e-6)
+            ndvi_values.extend(ndvi)
+
+        return np.mean(ndvi_values), np.std(ndvi_values)
 
     def get_class_distribution(self):
         return self.img_labels["fire_risk"].value_counts(ascending=True)
@@ -79,29 +88,6 @@ class CustomImageDataset(Dataset):
         class_dist = self.get_class_distribution()
         return max(class_dist) / class_dist
 
-    def get_class_idx(self, class_name):
-        return self.class2idx[class_name.lower()]
-
-    def get_class_string(self, idx):
-        return self.idx2class[idx]
-
     def get_class_weights_tensor(self):
         class_weights = self.get_class_weights()
-        # return tensor as float32
-        return torch.tensor(
-            [class_weights[self.idx2class[i]] for i in range(len(self.classes))],
-            dtype=torch.float32,
-        )
-
-    def get_class_from_img_idx(self, idx: int):
-        return self.img_labels.iloc[idx, 1]
-
-    def get_class_string_from_numeric_label(self, idxs: list[int]) -> list[str]:
-        return [self.classes[idx] for idx in idxs]
-
-
-def imshow(img):
-    img = img / 2 + 0.5  # unnormalize
-    npimg = img.numpy()
-    plt.imshow(np.transpose(npimg, (1, 2, 0)))
-    plt.show()
+        return torch.tensor([class_weights[self.idx2class[i]] for i in range(len(self.classes))], dtype=torch.float32)
