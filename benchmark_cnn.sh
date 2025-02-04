@@ -12,7 +12,7 @@ docker run -it --rm -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier
 
 echo "Copying efficientnet_b5..."
 
-mkdir -p ~/models/3C/efficientnet_b5
+mkdir -p ~/models/2C/efficientnet_b5
 cp -r $WEIGHTS_PATH/efficientnet_b5_body_2C.pth ~/models/3C/efficientnet_b5
 cp -r $WEIGHTS_PATH/efficientnet_b5_body_2C_metrics.json ~/models/3C/efficientnet_b5
 
