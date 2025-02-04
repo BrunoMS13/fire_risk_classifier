@@ -179,8 +179,8 @@ class Pipeline:
             else:
                 early_stop_counter += 1
 
-            if early_stop_counter >= self.patience:
-                print(f"Early stopping at Epoch {epoch+1} (Best Val Accuracy: {best_val_acc:.2f}%)")
+            if early_stop_counter >= self.params.patience:
+                logging.info(f"Early stopping at Epoch {epoch+1} (Best Val Accuracy: {best_val_acc:.2f}%)")
                 break
 
         self.__save_model(temp_best_model, epoch_data)
