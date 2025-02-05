@@ -6,7 +6,7 @@ authors = ["Bruno <bme.silva@campus.fct.unl.pt>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.10,<3.12"
 
 # GPU-enabled PyTorch from the 'pytorch' source:
 torch = { version = "2.0.1", source = "pytorch" }
