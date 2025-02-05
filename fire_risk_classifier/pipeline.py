@@ -164,13 +164,14 @@ class Pipeline:
             self.__gradual_unfreeze(model)
 
             loss, accuracy = self.__training_step(epoch, model, optimizer, scheduler, criterion)
+            torch.cuda.empty_cache()
             val_loss, val_accuracy = self.__validation_step(model, criterion)
+            torch.cuda.empty_cache()
 
             epoch_data["train_loss"].append(loss)
             epoch_data["train_accuracy"].append(accuracy)
             epoch_data["val_loss"].append(val_loss)
             epoch_data["val_accuracy"].append(val_accuracy)
-            torch.cuda.empty_cache()
 
             if val_accuracy > best_val_acc:
                 best_val_acc = val_accuracy
@@ -231,15 +232,18 @@ class Pipeline:
         running_loss = 0.0
         correct_predictions = 0
         total_steps = len(self.data_loader)
+        scaler = torch.cuda.amp.GradScaler()
 
-        for step, (images, labels) in enumerate(self.data_loader):
+        for images, labels in self.data_loader:
             images, labels = images.to(self.device), labels.to(self.device)
-
             optimizer.zero_grad()
-            outputs = model(images)
-            loss = criterion(outputs, labels.unsqueeze(1).float())
-            loss.backward()
-            optimizer.step()
+            with torch.cuda.amp.autocast():
+                outputs = model(images)
+                loss = criterion(outputs, labels.unsqueeze(1).float())
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+
             scheduler.step()
 
             running_loss += loss.item()
