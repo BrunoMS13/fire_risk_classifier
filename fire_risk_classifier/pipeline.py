@@ -161,7 +161,7 @@ class Pipeline:
 
         for epoch in range(self.params.cnn_epochs):
             logging.info(f"Start of Epoch Memory Allocated: {torch.cuda.memory_allocated() / 1e9:.2f} GB | Reserved: {torch.cuda.memory_reserved() / 1e9:.2f} GB")
-            
+
             self.current_epoch = epoch
             self.__gradual_unfreeze(model)
 
@@ -238,7 +238,7 @@ class Pipeline:
         total_steps = len(self.data_loader)
         scaler = torch.cuda.amp.GradScaler()
 
-        for images, labels in self.data_loader:
+        for step, (images, labels) in enumerate(self.data_loader):
             images, labels = images.to(self.device), labels.to(self.device)
             optimizer.zero_grad()
             with torch.cuda.amp.autocast():
