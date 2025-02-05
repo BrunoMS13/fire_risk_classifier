@@ -4,8 +4,9 @@ from fire_risk_classifier.utils.logger import Logger
 from fire_risk_classifier.dataclasses.params import Params
 
 model_names = [
+    "densenet161_body_2C.pth",
     "efficientnet_b4_body_2C.pth",
-    "efficientnet_b5_body_2C.pth"
+    "efficientnet_b5_body_2C.pth",
 ]
 
 NUM_CLASSES = 2
