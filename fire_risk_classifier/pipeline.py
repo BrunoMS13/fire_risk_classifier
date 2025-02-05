@@ -296,12 +296,12 @@ class Pipeline:
                 else:
                     predicted = (torch.sigmoid(outputs) >= 0.5).float()  # Binary classification
 
-                correct_predictions += (predicted == labels).sum().item()
+                correct_predictions += (predicted.view(-1) == labels.view(-1)).sum().item()
                 total_samples += labels.size(0)
 
                 # Append for confusion matrix
                 all_labels.extend(labels.cpu().numpy())
-                all_predictions.extend(predicted.cpu().numpy())
+                all_predictions.extend(predicted.view(-1).cpu().numpy().astype(int).tolist())
 
                 if step % 10 == 0 and log_info:
                     logging.info(

@@ -9,3 +9,4 @@ fire_risk_classifier/data/cnn_checkpoint_weights
 *.pth
 *.kml
 *.kmz
+*.txt
