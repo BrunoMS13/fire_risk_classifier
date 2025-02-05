@@ -142,7 +142,7 @@ class Pipeline:
         )
 
     # ------------------- Training and Testing ------------------- #
-
+          
     def train_cnn(self):
         model = get_cnn_model(self.params).to(self.device)
         optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=3e-4)
@@ -160,6 +160,8 @@ class Pipeline:
         temp_best_model = None
 
         for epoch in range(self.params.cnn_epochs):
+            logging.info(f"Start of Epoch Memory Allocated: {torch.cuda.memory_allocated() / 1e9:.2f} GB | Reserved: {torch.cuda.memory_reserved() / 1e9:.2f} GB")
+            
             self.current_epoch = epoch
             self.__gradual_unfreeze(model)
 
@@ -167,6 +169,8 @@ class Pipeline:
             torch.cuda.empty_cache()
             val_loss, val_accuracy = self.__validation_step(model, criterion)
             torch.cuda.empty_cache()
+
+            logging.info(f"End of Epoch Memory Allocated: {torch.cuda.memory_allocated() / 1e9:.2f} GB | Reserved: {torch.cuda.memory_reserved() / 1e9:.2f} GB")
 
             epoch_data["train_loss"].append(loss)
             epoch_data["train_accuracy"].append(accuracy)
