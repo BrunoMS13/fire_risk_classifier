@@ -59,7 +59,7 @@ class UnfreezeLayers:
             for param in group.parameters():
                 param.requires_grad = False
 
-        for param in model.classifier.parameters():
+        for param in model.fc.parameters():
             param.requires_grad = True
 
         # Unfreeze gradually
