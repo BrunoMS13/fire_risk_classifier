@@ -17,6 +17,7 @@ from sklearn.metrics import confusion_matrix
 from fire_risk_classifier.dataclasses.params import Params
 from fire_risk_classifier.classifier.cnn import get_cnn_model
 from fire_risk_classifier.data.image_dataset import CustomImageDataset
+from fire_risk_classifier.scripts.unfreeze_layers import UnfreezeLayers
 
 
 class Pipeline:
@@ -163,7 +164,7 @@ class Pipeline:
             logging.info(f"Start of Epoch Memory Allocated: {torch.cuda.memory_allocated() / 1e9:.2f} GB | Reserved: {torch.cuda.memory_reserved() / 1e9:.2f} GB")
 
             self.current_epoch = epoch
-            self.__gradual_unfreeze(model)
+            UnfreezeLayers.unfreeze_layers(model, epoch, self.params)
 
             loss, accuracy = self.__training_step(epoch, model, optimizer, scheduler, criterion)
             torch.cuda.empty_cache()
@@ -425,33 +426,3 @@ class Pipeline:
         logging.info(f"Validation Loss: {avg_loss:.4f} | Validation Accuracy: {accuracy:.2f}%")
         return avg_loss, accuracy
     
-    def __gradual_unfreeze(self, model: nn.Module):
-        # Divide your EfficientNet feature extractor into "blocks" or groups of layers
-        layer_groups = [
-            model.features[:3],   # early blocks
-            model.features[3:6],  # middle blocks
-            model.features[6:],   # deeper blocks
-        ]
-        
-        # First, freeze all feature-extraction layers
-        for group in layer_groups:
-            for param in group.parameters():
-                param.requires_grad = False
-        
-        # Always leave the classifier head trainable
-        for param in model.classifier.parameters():
-            param.requires_grad = True
-        
-        # Gradually unfreeze each block group at specific epochs
-        # Example schedule: unfreeze first group at epoch >=2, second at >=4, final at >=6
-        if self.current_epoch >= 2:
-            for param in layer_groups[0].parameters():
-                param.requires_grad = True
-        
-        if self.current_epoch >= 4:
-            for param in layer_groups[1].parameters():
-                param.requires_grad = True
-        
-        if self.current_epoch >= 6:
-            for param in layer_groups[2].parameters():
-                param.requires_grad = True
