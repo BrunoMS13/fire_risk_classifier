@@ -33,6 +33,8 @@ class ArgumentParser:
         self.parser.add_argument("--images_dir", default="", type=str)
         self.parser.add_argument("--save_as", default="", type=str)
         self.parser.add_argument("--num_classes", default=2, type=int)
+        self.parser.add_argument("--lr", default=1e-4, type=float)
+        self.parser.add_argument("--wd", default=3e-4, type=float)
 
     def get_parser_dict(self) -> dict[str, Any]:
         return vars(self.parser.parse_args())

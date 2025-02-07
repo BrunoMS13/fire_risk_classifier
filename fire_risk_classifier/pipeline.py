@@ -63,6 +63,10 @@ class Pipeline:
             self.params.directories["testing_annotations_file"] = (
                 f"{path}/test_{num_classes}classes.csv"
             )
+        if args.get("lr"):
+            self.params.cnn_adam_learning_rate = args.get("lr")
+        if args.get("wd"):
+            self.params.cnn_adam_weight_decay = args.get("wd")
 
         self.__init_data_loaders()
 
@@ -81,16 +85,24 @@ class Pipeline:
         if self.params.test_cnn:
             self.__init_test_dataloader(directories, batch_size)
 
-    def __init_train_and_val_dataloaders(self, directories: dict[str, str], batch_size: int):
+    def __init_train_and_val_dataloaders(
+        self, directories: dict[str, str], batch_size: int
+    ):
         if self.params.train_cnn:
-            transform = transforms.Compose([
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomVerticalFlip(),
-                transforms.RandomRotation(30),
-                transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
-                transforms.ToTensor(),
-                transforms.Normalize([0.5113, 0.4098, 0.3832], [0.1427, 0.1708, 0.1416]),
-            ])
+            transform = transforms.Compose(
+                [
+                    transforms.RandomHorizontalFlip(),
+                    transforms.RandomVerticalFlip(),
+                    transforms.RandomRotation(30),
+                    transforms.ColorJitter(
+                        brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1
+                    ),
+                    transforms.ToTensor(),
+                    transforms.Normalize(
+                        [0.5113, 0.4098, 0.3832], [0.1427, 0.1708, 0.1416]
+                    ),
+                ]
+            )
 
             # Training data loader
             self.dataset = CustomImageDataset(
@@ -102,7 +114,9 @@ class Pipeline:
             )
             train_size = int(0.8 * len(self.dataset))
             val_size = len(self.dataset) - train_size
-            train_dataset, val_dataset = torch.utils.data.random_split(self.dataset, [train_size, val_size])
+            train_dataset, val_dataset = torch.utils.data.random_split(
+                self.dataset, [train_size, val_size]
+            )
 
             # Assign training dataloader (80% data)
             self.data_loader = DataLoader(
@@ -115,10 +129,14 @@ class Pipeline:
             )
 
     def __init_test_dataloader(self, directories: dict[str, str], batch_size: int):
-        transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize([0.5113, 0.4098, 0.3832], [0.1427, 0.1708, 0.1416]),
-        ])
+        transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    [0.5113, 0.4098, 0.3832], [0.1427, 0.1708, 0.1416]
+                ),
+            ]
+        )
 
         # Testing data loader
         self.test_dataset = CustomImageDataset(
@@ -135,7 +153,7 @@ class Pipeline:
     def __get_normalize_transform(self) -> transforms.Normalize:
         dataset_mean = [0.5113, 0.4098, 0.3832]
         dataset_std = [0.1427, 0.1708, 0.1416]
-        
+
         return (
             transforms.Normalize(mean=dataset_mean + [0.0], std=dataset_std + [1.0])
             if self.params.calculate_ndvi_index
@@ -143,10 +161,15 @@ class Pipeline:
         )
 
     # ------------------- Training and Testing ------------------- #
-          
+
     def train_cnn(self):
         model = get_cnn_model(self.params).to(self.device)
-        optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=3e-4)
+        optimizer = optim.AdamW(
+            model.parameters(),
+            lr=self.params.cnn_adam_learning_rate,
+            weight_decay=self.params.cnn_adam_weight_decay,
+        )
+        logging.info(f"LR: {self.params.cnn_adam_learning_rate} | WD: {self.params.cnn_adam_weight_decay}")
         self.current_epoch = 0
 
         criterion = self.__get_criterion()
@@ -157,21 +180,32 @@ class Pipeline:
 
         # Load saved model weights
         self.__load_model_weights(model)
-        epoch_data = {"train_loss": [], "train_accuracy": [], "val_loss": [], "val_accuracy": []}
+        epoch_data = {
+            "train_loss": [],
+            "train_accuracy": [],
+            "val_loss": [],
+            "val_accuracy": [],
+        }
         temp_best_model = None
 
         for epoch in range(self.params.cnn_epochs):
-            logging.info(f"Start of Epoch Memory Allocated: {torch.cuda.memory_allocated() / 1e9:.2f} GB | Reserved: {torch.cuda.memory_reserved() / 1e9:.2f} GB")
+            logging.info(
+                f"Start of Epoch Memory Allocated: {torch.cuda.memory_allocated() / 1e9:.2f} GB | Reserved: {torch.cuda.memory_reserved() / 1e9:.2f} GB"
+            )
 
             self.current_epoch = epoch
             UnfreezeLayers.unfreeze_layers(model, epoch, self.params)
 
-            loss, accuracy = self.__training_step(epoch, model, optimizer, scheduler, criterion)
+            loss, accuracy = self.__training_step(
+                epoch, model, optimizer, scheduler, criterion
+            )
             torch.cuda.empty_cache()
             val_loss, val_accuracy = self.__validation_step(model, criterion)
             torch.cuda.empty_cache()
 
-            logging.info(f"End of Epoch Memory Allocated: {torch.cuda.memory_allocated() / 1e9:.2f} GB | Reserved: {torch.cuda.memory_reserved() / 1e9:.2f} GB")
+            logging.info(
+                f"End of Epoch Memory Allocated: {torch.cuda.memory_allocated() / 1e9:.2f} GB | Reserved: {torch.cuda.memory_reserved() / 1e9:.2f} GB"
+            )
 
             epoch_data["train_loss"].append(loss)
             epoch_data["train_accuracy"].append(accuracy)
@@ -186,7 +220,9 @@ class Pipeline:
                 early_stop_counter += 1
 
             if early_stop_counter >= self.params.patience:
-                logging.info(f"Early stopping at Epoch {epoch+1} (Best Val Accuracy: {best_val_acc:.2f}%)")
+                logging.info(
+                    f"Early stopping at Epoch {epoch+1} (Best Val Accuracy: {best_val_acc:.2f}%)"
+                )
                 break
 
         self.__save_model(temp_best_model, epoch_data)
@@ -259,7 +295,9 @@ class Pipeline:
                 else:
                     predicted = (torch.sigmoid(outputs) >= 0.5).float()
 
-                correct_predictions += (predicted.view(-1) == labels.view(-1)).sum().item()
+                correct_predictions += (
+                    (predicted.view(-1) == labels.view(-1)).sum().item()
+                )
                 total_samples += labels.size(0)
 
             logging.info(
@@ -274,7 +312,9 @@ class Pipeline:
         accuracy = 100 * correct_predictions / total_samples
         return avg_loss, accuracy
 
-    def test_cnn(self, plot_confusion_matrix: bool = True, log_info: bool = True) -> list[int]:
+    def test_cnn(
+        self, plot_confusion_matrix: bool = True, log_info: bool = True
+    ) -> list[int]:
         model = get_cnn_model(self.params).to(self.device)
         model.train(mode=False)
         criterion = self.__get_criterion()
@@ -303,14 +343,20 @@ class Pipeline:
                 if self.params.num_labels > 2:
                     predicted = torch.argmax(outputs, dim=1)  # Multi-class
                 else:
-                    predicted = (torch.sigmoid(outputs) >= 0.5).float()  # Binary classification
+                    predicted = (
+                        torch.sigmoid(outputs) >= 0.5
+                    ).float()  # Binary classification
 
-                correct_predictions += (predicted.view(-1) == labels.view(-1)).sum().item()
+                correct_predictions += (
+                    (predicted.view(-1) == labels.view(-1)).sum().item()
+                )
                 total_samples += labels.size(0)
 
                 # Append for confusion matrix
                 all_labels.extend(labels.cpu().numpy())
-                all_predictions.extend(predicted.view(-1).cpu().numpy().astype(int).tolist())
+                all_predictions.extend(
+                    predicted.view(-1).cpu().numpy().astype(int).tolist()
+                )
 
                 if step % 10 == 0 and log_info:
                     logging.info(
@@ -341,7 +387,9 @@ class Pipeline:
 
     def __get_scheduler(self, optimizer: optim.Optimizer) -> LambdaLR:
         def lr_lambda(step: int) -> float:
-            epoch_fraction = self.current_epoch / self.params.cnn_epochs  # How far along training is
+            epoch_fraction = (
+                self.current_epoch / self.params.cnn_epochs
+            )  # How far along training is
 
             if epoch_fraction < 0.3:  # First 30% of epochs → Keep high LR
                 return 1.0  # Full LR
@@ -368,7 +416,6 @@ class Pipeline:
             return LambdaLR(optimizer, lr_lambda=lr_lambda_for_fine_tuning)
         return LambdaLR(optimizer, lr_lambda=lr_lambda)
 
-
     def __get_criterion(self) -> nn.Module:
         if self.params.class_weights:
             class_weights = self.dataset.get_class_weights_tensor().to(self.device)
@@ -378,8 +425,11 @@ class Pipeline:
                 return nn.CrossEntropyLoss(weight=class_weights)
             return nn.BCEWithLogitsLoss(pos_weight=class_weights)
 
-        return nn.CrossEntropyLoss() if self.params.num_labels > 2 else nn.BCEWithLogitsLoss()
-
+        return (
+            nn.CrossEntropyLoss()
+            if self.params.num_labels > 2
+            else nn.BCEWithLogitsLoss()
+        )
 
     def __plot_confusion_matrix(self, all_labels: list, all_predictions: list):
         cm = confusion_matrix(all_labels, all_predictions)
@@ -409,7 +459,9 @@ class Pipeline:
                 images, labels = images.to(self.device), labels.to(self.device)
 
                 outputs = model(images)
-                loss = criterion(outputs, labels.unsqueeze(1).float())  # Ensure labels match shape
+                loss = criterion(
+                    outputs, labels.unsqueeze(1).float()
+                )  # Ensure labels match shape
 
                 running_loss += loss.item()
 
@@ -418,11 +470,14 @@ class Pipeline:
                     if self.params.num_labels > 2
                     else (torch.sigmoid(outputs) >= 0.5).float()
                 )
-                correct_predictions += (predicted.view(-1) == labels.view(-1)).sum().item()
+                correct_predictions += (
+                    (predicted.view(-1) == labels.view(-1)).sum().item()
+                )
                 total_samples += labels.size(0)
 
         avg_loss = running_loss / len(self.val_data_loader)
         accuracy = 100 * correct_predictions / total_samples
-        logging.info(f"Validation Loss: {avg_loss:.4f} | Validation Accuracy: {accuracy:.2f}%")
+        logging.info(
+            f"Validation Loss: {avg_loss:.4f} | Validation Accuracy: {accuracy:.2f}%"
+        )
         return avg_loss, accuracy
-    
