@@ -94,9 +94,6 @@ class Pipeline:
                     transforms.RandomHorizontalFlip(),
                     transforms.RandomVerticalFlip(),
                     transforms.RandomRotation(30),
-                    transforms.ColorJitter(
-                        brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1
-                    ),
                     transforms.ToTensor(),
                     transforms.Normalize(
                         [0.5113, 0.4098, 0.3832], [0.1427, 0.1708, 0.1416]
@@ -387,18 +384,18 @@ class Pipeline:
 
     def __get_scheduler(self, optimizer: optim.Optimizer) -> LambdaLR:
         def lr_lambda(step: int) -> float:
-            epoch_fraction = (
-                self.current_epoch / self.params.cnn_epochs
-            )  # How far along training is
+                epoch_fraction = self.current_epoch / self.params.cnn_epochs
 
-            if epoch_fraction < 0.3:  # First 30% of epochs → Keep high LR
-                return 1.0  # Full LR
-            elif epoch_fraction < 0.55:  # 30-60% of epochs → Reduce LR moderately
-                return 0.5  # Half LR
-            elif epoch_fraction < 0.8:  # 60-85% → Reduce further
-                return 0.2  # 20% of original LR
-            else:  # Last 15% → Very low LR for fine-tuning
-                return 0.05  # 5% of original LR
+                if epoch_fraction < 0.15:  # 🔥 First 15% of epochs (Warmup) → Keep LR Low
+                    return 0.3  # 30% of initial LR
+                elif epoch_fraction < 0.5:  # 🔥 15-50% of epochs (Main Training Phase)
+                    return 1.0  # Full LR (Keep stable)
+                elif epoch_fraction < 0.75:  # 🔥 50-75% → Start Reducing LR
+                    return 0.3  # Reduce to 30% of initial LR
+                elif epoch_fraction < 0.9:  # 🔥 75-90% → Lower Further
+                    return 0.1  # Reduce to 10% of initial LR
+                else:  # 🔥 Last 10% → Final Fine-Tuning Phase
+                    return 0.02  # Reduce to 2% of initial LR
 
         def lr_lambda_for_fine_tuning(step: int) -> float:
             epoch_fraction = self.current_epoch / self.params.cnn_epochs
