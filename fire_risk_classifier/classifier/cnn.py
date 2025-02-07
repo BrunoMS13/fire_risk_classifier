@@ -139,13 +139,11 @@ def __adapt_model(calculate_ndvi_index: bool, base_model: nn.Module, freeze_laye
                 param.requires_grad = True
 
 
-
 def __adapt_model_to_ndvi(base_model: nn.Module):
     """
     Modify the first convolutional layer of the CNN to accept 4 input channels instead of 3 (RGB + NDVI).
     """
     first_layer = None
-
     # Identify the first layer based on model type
     if isinstance(base_model, models.ResNet):
         first_layer = base_model.conv1
@@ -153,11 +151,12 @@ def __adapt_model_to_ndvi(base_model: nn.Module):
         first_layer = base_model.features.conv0
     elif isinstance(base_model, models.EfficientNet):
         first_layer = base_model.features[0]
-    elif isinstance(base_model, models.VGG):
-        first_layer = base_model.features[0]
 
     if first_layer is None:
         raise ValueError("Unsupported model type for NDVI adaptation.")
+
+    # Check if bias is used
+    bias = first_layer.bias is not None
 
     # Create a new conv layer with 4 input channels
     new_conv = nn.Conv2d(
@@ -166,13 +165,22 @@ def __adapt_model_to_ndvi(base_model: nn.Module):
         kernel_size=first_layer.kernel_size,
         stride=first_layer.stride,
         padding=first_layer.padding,
-        bias=False
+        bias=bias
     )
 
     # Initialize weights: Copy RGB weights & duplicate Red weights for NDVI
     with torch.no_grad():
-        new_conv.weight[:, :3, :, :] = first_layer.weight
-        new_conv.weight[:, 3, :, :] = first_layer.weight[:, 0, :, :]  # Copy red channel weights to NDVI
+        # IRG: Map pretrained weights from RGB -> IRG
+        new_conv.weight[:, 0, :, :].copy_(first_layer.weight[:, 2, :, :])  # Map Red → IR (assuming NIR replaces Blue)
+        new_conv.weight[:, 1, :, :].copy_(first_layer.weight[:, 0, :, :])  # Map Green → Red
+        new_conv.weight[:, 2, :, :].copy_(first_layer.weight[:, 1, :, :])  # Map Blue → Green (now it's R → G)
+
+        # NDVI: Initialize based on Red (or custom init)
+        new_conv.weight[:, 3, :, :].copy_(first_layer.weight[:, 0, :, :])  # Copy Red weights for NDVI
+
+    # Copy bias if applicable
+    if bias:
+        new_conv.bias.data.copy_(first_layer.bias.data)
 
     # Replace the old conv layer
     if isinstance(base_model, models.ResNet):
@@ -181,8 +189,9 @@ def __adapt_model_to_ndvi(base_model: nn.Module):
         base_model.features.conv0 = new_conv
     elif isinstance(base_model, models.EfficientNet):
         base_model.features[0] = new_conv
-    elif isinstance(base_model, models.VGG):
-        base_model.features[0] = new_conv
+
+    return base_model
+
 
 
 

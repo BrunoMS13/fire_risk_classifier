@@ -3,15 +3,17 @@ from fire_risk_classifier.pipeline import Pipeline
 from fire_risk_classifier.utils.logger import Logger
 from fire_risk_classifier.dataclasses.params import Params
 
-model_names = [
+irg_model_names = [
     "densenet161_body_2C.pth",
-    "efficientnet_b4_body_2C.pth",
+    "efficientnet_b5_body_2C.pth",
+]
+rgb_model_names = [
     "efficientnet_b5_body_2C.pth",
 ]
 
 NUM_CLASSES = 2
 CALCULATE_IRG = True
-CALCULATE_RGB = False
+CALCULATE_RGB = True
 
 
 def majority_vote(all_predictions_list):
@@ -43,7 +45,8 @@ def get_params(is_irg: bool) -> Params:
 
     base_images_path = "fire_risk_classifier/data/images/"
     params.directories["images_directory"] = (
-        f"{base_images_path}ortos2018-IRG-62_5m-decompressed" if is_irg
+        f"{base_images_path}ortos2018-IRG-62_5m-decompressed"
+        if is_irg
         else f"{base_images_path}ortos2018-RGB-62_5m-decompressed"
     )
 
@@ -51,10 +54,9 @@ def get_params(is_irg: bool) -> Params:
 
 
 def write_results(results: list, is_irg: bool):
+    models = irg_model_names if is_irg else rgb_model_names
     for i, (labels, predictions) in enumerate(results):
-        with open(
-            f"results_{model_names[i]}_{'IRG' if is_irg else 'RGB'}.txt", "w"
-        ) as f:
+        with open(f"results_{models[i]}_{'IRG' if is_irg else 'RGB'}.txt", "w") as f:
             f.write("label,prediction\n")
             for label, prediction in zip(labels, predictions):
                 f.write(f"{label},{prediction}\n")
@@ -68,7 +70,7 @@ def main():
     if CALCULATE_IRG:
         # Run all pipelines and collect results
         params = get_params(is_irg=True)
-        results = [get_predictions(model, params) for model in model_names]
+        results = [get_predictions(model, params) for model in irg_model_names]
         write_results(results, is_irg=True)
 
         all_labels, all_predictions_list = zip(*results)
@@ -79,7 +81,7 @@ def main():
 
     if CALCULATE_RGB:
         params = get_params(is_irg=False)
-        results = [get_predictions(model, params) for model in model_names]
+        results = [get_predictions(model, params) for model in rgb_model_names]
         write_results(results, is_irg=False)
 
         all_labels, all_predictions_list = zip(*results)
