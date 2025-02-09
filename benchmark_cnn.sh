@@ -13,30 +13,22 @@ docker run -it --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk
 
 echo "Copying efficientnet_b5..."
 
-mkdir -p ~/models/eb5_wd2e4_lr3e4
-cp -r $WEIGHTS_PATH/efficientnet_b5_body_2C.pth ~/models/eb5_wd2e4_lr3e4
-cp -r $WEIGHTS_PATH/efficientnet_b5_body_2C_metrics.json ~/models/eb5_wd2e4_lr3e4
+cp -r $WEIGHTS_PATH/eb5_wd2e4_lr3e4.pth ~/models
+cp -r $WEIGHTS_PATH/eb5_wd2e4_lr3e4.json ~/models
 
 docker run -it --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train --algorithm densenet161 --batch_size 16 --train True --num_epochs 15 --num_classes $NUM_CLASSES --images_dir $IMAGE_DIR --wd 5e-4 --lr 5e-4 --save_as d161_wd5e4_lr5e4
 
 echo "Copying densenet161..."
 
-mkdir -p ~/models/d161_wd5e4_lr5e4
-cp -r $WEIGHTS_PATH/densenet161_body_2C.pth ~/models/d161_wd5e4_lr5e4
-cp -r $WEIGHTS_PATH/densenet161_body_2C_metrics.json ~/models/d161_wd5e4_lr5e4
+cp -r $WEIGHTS_PATH/d161_wd5e4_lr5e4.pth ~/models
+cp -r $WEIGHTS_PATH/d161_wd5e4_lr5e4_metrics.json ~/models
 
-#resnet101
-
-RESNET_LR="5e-4"
-RESNET_WD="5e-4"
-SAVE_AS_RESNET101="r101_wd5e-4_lr5e-4"
 docker run -it --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train --algorithm resnet101 --batch_size 16 --train True --num_epochs 15 --num_classes $NUM_CLASSES --images_dir $IMAGE_DIR --wd 5e-4 --lr 5e-4 --save_as r101_wd5e4_lr5e4
 
 echo "Copying resnet101..."
 
-mkdir -p ~/models/r101_wd5e4_lr5e4
-cp -r $WEIGHTS_PATH/resnet101_body_2C.pth ~/models/r101_wd5e4_lr5e4
-cp -r $WEIGHTS_PATH/resnet101_body_2C_metrics.json ~/models/r101_wd5e4_lr5e4
+cp -r $WEIGHTS_PATH/r101_wd5e4_lr5e4.pth ~/models
+cp -r $WEIGHTS_PATH/r101_wd5e4_lr5e4_metrics.json ~/models
 
 echo "Benchmark trainings complete!"
 
