@@ -44,8 +44,8 @@ class Params:
         self.cnn_adam_weight_decay = 3e-4
         self.cnn_adam_loss = "categorical_crossentropy"
 
-        self.cnn_epochs = 12
-        self.patience = 3
+        self.cnn_epochs = 15
+        self.patience = 5
 
         self.lstm_adam_learning_rate = 1e-4
         self.lstm_epochs = 100
