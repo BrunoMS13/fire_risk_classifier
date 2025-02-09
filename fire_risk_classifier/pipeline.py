@@ -72,6 +72,7 @@ class Pipeline:
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logging.info(f"Using device: {self.device}")
+        logging.info(f"Images directory: {self.params.directories['images_directory']}")
 
     # ------------------- Data Loaders ------------------- #
 
