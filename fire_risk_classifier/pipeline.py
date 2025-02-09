@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from typing import Any
+import numpy as np
 
 import torch
 import torch.nn as nn
@@ -384,33 +384,16 @@ class Pipeline:
 
     def __get_scheduler(self, optimizer: optim.Optimizer) -> LambdaLR:
         def lr_lambda(step: int) -> float:
-                epoch_fraction = self.current_epoch / self.params.cnn_epochs
-
-                if epoch_fraction < 0.15:  # 🔥 First 15% of epochs (Warmup) → Keep LR Low
-                    return 0.3  # 30% of initial LR
-                elif epoch_fraction < 0.5:  # 🔥 15-50% of epochs (Main Training Phase)
-                    return 1.0  # Full LR (Keep stable)
-                elif epoch_fraction < 0.75:  # 🔥 50-75% → Start Reducing LR
-                    return 0.3  # Reduce to 30% of initial LR
-                elif epoch_fraction < 0.9:  # 🔥 75-90% → Lower Further
-                    return 0.1  # Reduce to 10% of initial LR
-                else:  # 🔥 Last 10% → Final Fine-Tuning Phase
-                    return 0.02  # Reduce to 2% of initial LR
-
-        def lr_lambda_for_fine_tuning(step: int) -> float:
+            """Smoothly adjusts the learning rate across training phases."""
             epoch_fraction = self.current_epoch / self.params.cnn_epochs
 
-            if epoch_fraction < 0.2:  # First 20% → Normal LR
-                return 1.0
-            elif epoch_fraction < 0.5:  # 20-50% → Drop gradually
-                return 0.3
-            elif epoch_fraction < 0.8:  # 50-80% → Lower LR further
-                return 0.1
-            else:  # Last 20% → Tiny LR for fine-tuning
-                return 0.02
+            if epoch_fraction < 0.15:  # 🔥 Warmup: Gradually increase
+                return 0.3 + 0.7 * (epoch_fraction / 0.15)  # Linear warmup to full LR
+            elif epoch_fraction < 0.5:  # 🔥 Main training phase
+                return 1.0  # Keep LR stable
+            else:  # 🔥 Decay phase using cosine annealing
+                return 0.5 * (1 + np.cos(np.pi * (epoch_fraction - 0.5) / 0.5))  # Cosine decay
 
-        if self.params.fine_tunning:
-            return LambdaLR(optimizer, lr_lambda=lr_lambda_for_fine_tuning)
         return LambdaLR(optimizer, lr_lambda=lr_lambda)
 
     def __get_criterion(self) -> nn.Module:

@@ -31,15 +31,15 @@ class UnfreezeLayers:
             param.requires_grad = True
 
         # Gradually unfreeze at different epochs
-        if current_epoch >= 2:
+        if current_epoch >= 3:
             for param in layer_groups[0].parameters():
                 param.requires_grad = True
 
-        if current_epoch >= 4:
+        if current_epoch >= 6:
             for param in layer_groups[1].parameters():
                 param.requires_grad = True
 
-        if current_epoch >= 6:
+        if current_epoch >= 9:
             for param in layer_groups[2].parameters():
                 param.requires_grad = True
 
@@ -63,19 +63,19 @@ class UnfreezeLayers:
             param.requires_grad = True
 
         # Unfreeze gradually
-        if current_epoch >= 2:
+        if current_epoch >= 3:
             for param in layer_groups[1].parameters():
                 param.requires_grad = True  # Unfreeze layer1
 
-        if current_epoch >= 4:
+        if current_epoch >= 6:
             for param in layer_groups[2].parameters():
                 param.requires_grad = True  # Unfreeze layer2
 
-        if current_epoch >= 6:
+        if current_epoch >= 9:
             for param in layer_groups[3].parameters():
                 param.requires_grad = True  # Unfreeze layer3
 
-        if current_epoch >= 8:
+        if current_epoch >= 12:
             for param in layer_groups[4].parameters():
                 param.requires_grad = True  # Unfreeze layer4
 
@@ -97,14 +97,14 @@ class UnfreezeLayers:
             param.requires_grad = True
 
         # Gradually unfreeze layers
-        if current_epoch >= 2:
+        if current_epoch >= 3:
             for param in layer_groups[0].parameters():
                 param.requires_grad = True  # Unfreeze first layers
 
-        if current_epoch >= 4:
+        if current_epoch >= 6:
             for param in layer_groups[1].parameters():
                 param.requires_grad = True  # Unfreeze middle layers
 
-        if current_epoch >= 6:
+        if current_epoch >= 9:
             for param in layer_groups[2].parameters():
                 param.requires_grad = True  # Unfreeze final layers
