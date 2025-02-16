@@ -72,9 +72,8 @@ def plot_learning_rates(models_dict):
 
 # **Define the learning rate models to compare (all on one plot)**
 learning_rate_models = {
-    "1e-3": load_json_data("models/models/r101_irg_wd5e-4_lr1e-3_nothing_metrics.json"),
-    "1e-4": load_json_data("models/models/r101_irg_wd5e-4_lr1e-4_nothing_metrics.json"),
-    "1e-5": load_json_data("models/models/r101_irg_wd5e-4_lr1e-5_nothing_metrics.json"),
+    "1e-4": load_json_data("models/models/r50_irg_wd5e-4_lr1e-4_nothing_metrics.json"),
+    "1e-5": load_json_data("models/models/r50_irg_wd5e-4_lr1e-5_nothing_metrics.json"),
 }
 
 # Remove any None values in case a file wasn't found
