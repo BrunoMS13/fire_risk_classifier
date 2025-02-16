@@ -23,11 +23,11 @@ echo "Experiment Results - $(date)" > $LOG_FILE
 for lr in "${LEARNING_RATES[@]}"; do
     for unfreeze in "${UNFREEZING[@]}"; do
         
-        EXP_NAME="r101_irg_wd${WEIGHT_DECAY}_lr${lr}_${unfreeze}"
+        EXP_NAME="r50_irg_wd${WEIGHT_DECAY}_lr${lr}_${unfreeze}"
 
-        echo "Training ResNet101 with lr=$lr, wd=$WEIGHT_DECAY, unfreeze=$unfreeze"
+        echo "Training ResNet50 with lr=$lr, wd=$WEIGHT_DECAY, unfreeze=$unfreeze"
         docker run -it --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train \
-            --algorithm resnet101 --batch_size 16 --train True --num_epochs 18 --num_classes $NUM_CLASSES \
+            --algorithm resnet50 --batch_size 16 --train True --num_epochs 18 --num_classes $NUM_CLASSES \
             --images_dir $IMAGE_DIR --wd $WEIGHT_DECAY --lr $lr --unfreeze $unfreeze --save_as $EXP_NAME
 
         echo "Copying Results for $EXP_NAME..."
