@@ -15,7 +15,12 @@ def get_cnn_model(params: Params) -> nn.Module:
             return get_resnet_model(params)
         case "densenet161" | "densenet169" | "densenet201":
             return get_densenet_model(params)
-        case "efficientnet_b4" | "efficientnet_b5" | "efficientnet_b6" | "efficientnet_b7":
+        case (
+            "efficientnet_b4"
+            | "efficientnet_b5"
+            | "efficientnet_b6"
+            | "efficientnet_b7"
+        ):
             return get_efficientnet_model(params)
         case "vgg16" | "vgg19" | "vgg19_bn":
             return get_vgg_model(params)
@@ -125,7 +130,9 @@ def get_vgg_model(params: Params) -> models.VGG:
     return base_model
 
 
-def __adapt_model(calculate_ndvi_index: bool, base_model: nn.Module, freeze_layers: bool = True):
+def __adapt_model(
+    calculate_ndvi_index: bool, base_model: nn.Module, freeze_layers: bool = True
+):
     if calculate_ndvi_index:
         __adapt_model_to_ndvi(base_model)
 
@@ -165,18 +172,26 @@ def __adapt_model_to_ndvi(base_model: nn.Module):
         kernel_size=first_layer.kernel_size,
         stride=first_layer.stride,
         padding=first_layer.padding,
-        bias=bias
+        bias=bias,
     )
 
     # Initialize weights: Copy RGB weights & duplicate Red weights for NDVI
     with torch.no_grad():
         # IRG: Map pretrained weights from RGB -> IRG
-        new_conv.weight[:, 0, :, :].copy_(first_layer.weight[:, 2, :, :])  # Map Red → IR (assuming NIR replaces Blue)
-        new_conv.weight[:, 1, :, :].copy_(first_layer.weight[:, 0, :, :])  # Map Green → Red
-        new_conv.weight[:, 2, :, :].copy_(first_layer.weight[:, 1, :, :])  # Map Blue → Green (now it's R → G)
+        new_conv.weight[:, 0, :, :].copy_(
+            first_layer.weight[:, 2, :, :]
+        )  # Map Red → IR (assuming NIR replaces Blue)
+        new_conv.weight[:, 1, :, :].copy_(
+            first_layer.weight[:, 0, :, :]
+        )  # Map Green → Red
+        new_conv.weight[:, 2, :, :].copy_(
+            first_layer.weight[:, 1, :, :]
+        )  # Map Blue → Green (now it's R → G)
 
         # NDVI: Initialize based on Red (or custom init)
-        new_conv.weight[:, 3, :, :].copy_(first_layer.weight[:, 0, :, :])  # Copy Red weights for NDVI
+        new_conv.weight[:, 3, :, :].copy_(
+            first_layer.weight[:, 0, :, :]
+        )  # Copy Red weights for NDVI
 
     # Copy bias if applicable
     if bias:
@@ -193,22 +208,19 @@ def __adapt_model_to_ndvi(base_model: nn.Module):
     return base_model
 
 
-
-
 class Classifier(nn.Module):
     def __init__(self, input_size: int, hidden_size: int, num_classes: int):
         super(Classifier, self).__init__()
         # Define layers
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.relu1 = nn.ReLU()
-        self.dropout1 = nn.Dropout(0.4)
+        self.dropout1 = nn.Dropout(0.5)
 
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.relu2 = nn.ReLU()
-        self.dropout2 = nn.Dropout(0.4)
+        self.dropout2 = nn.Dropout(0.5)
 
         self.fc3 = nn.Linear(hidden_size, 1)
-
 
     def forward(self, x):
         # Forward pass through layers
