@@ -391,6 +391,7 @@ class Pipeline:
     def __get_scheduler(self, optimizer: optim.Optimizer) -> LambdaLR:
         def lr_lambda(step: int) -> float:
             epoch_fraction = self.current_epoch / self.params.cnn_epochs
+            return 1.0
 
             if epoch_fraction < 0.15:
                 return 0.3 + 0.7 * (epoch_fraction / 0.15)

@@ -37,6 +37,7 @@ generate_dataset_csv = "fire_risk_classifier.scripts.create_test_and_train_csv:m
 create_images_to_balance = "fire_risk_classifier.scripts.create_images_to_balance:main"
 
 full_test = "fire_risk_classifier.scripts.full_test_hydra:main"
+freeze_benchmark = "fire_risk_classifier.scripts.freeze_benchmark:main"
 
 # Only define the extra PyTorch wheel index:
 [[tool.poetry.source]]

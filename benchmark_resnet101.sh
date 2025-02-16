@@ -13,7 +13,7 @@ mkdir -p ~/models
 # Define hyperparameters to test
 LEARNING_RATES=("1e-5" "1e-4" "1e-3" "5e-4")  # Expanded learning rate options
 WEIGHT_DECAY="5e-4"  # Fixed weight decay for all runs
-UNFREEZING=("Gradual" "Nothing")
+UNFREEZING=("Nothing")
 
 # Logging file
 LOG_FILE=~/models/training_results.log
@@ -46,3 +46,4 @@ echo "Benchmark trainings complete! Results saved in $LOG_FILE"
 
 # Cleanup Docker Image
 docker rmi fire_risk_classifier_image
+
