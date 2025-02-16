@@ -9,6 +9,15 @@ cd fire_risk_classifier
 mkdir -p fire_risk_classifier/fire_risk_classifier/data/images && \
 cp -r ~/fire_risk_classifier/fire_risk_classifier/data/images/ortos2018-IRG-62_5m-decompressed fire_risk_classifier/fire_risk_classifier/data/images/
 
+# Check if the Docker image exists before trying to remove it
+if docker image inspect fire_risk_classifier_image > /dev/null 2>&1; then
+    echo "Removing existing Docker image..."
+    docker rmi fire_risk_classifier_image
+else
+    echo "No existing Docker image found. Skipping removal."
+fi
+
+
 echo "Building Docker Image..."
 docker build -t fire_risk_classifier_image .
 
