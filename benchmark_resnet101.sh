@@ -11,7 +11,7 @@ NUM_CLASSES=2
 mkdir -p ~/models
 
 # Define hyperparameters to test
-LEARNING_RATES=("1e-6" "5e-6" "5e-5" "1e-5")  # Expanded learning rate options
+LEARNING_RATES=("5e-6" "5e-5" "1e-5")  # Expanded learning rate options
 WEIGHT_DECAY="5e-4"  # Fixed weight decay for all runs
 UNFREEZING=("nothing")
 
