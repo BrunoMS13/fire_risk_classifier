@@ -27,6 +27,7 @@ class ArgumentParser:
         self.parser.add_argument("--num_classes", default=2, type=int)
         self.parser.add_argument("--lr", default=1e-4, type=float)
         self.parser.add_argument("--wd", default=3e-4, type=float)
+        self.parser.add_argument("--unfreeze", default="", type=str)
 
     def get_parser_dict(self) -> dict[str, Any]:
         return vars(self.parser.parse_args())

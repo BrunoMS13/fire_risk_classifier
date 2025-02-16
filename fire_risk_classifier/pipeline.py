@@ -68,6 +68,8 @@ class Pipeline:
             self.params.cnn_adam_learning_rate = args.get("lr")
         if args.get("wd"):
             self.params.cnn_adam_weight_decay = args.get("wd")
+        if args.get("unfreeze"):
+            self.params.unfreeze_strategy = args.get("unfreeze")
 
         self.__init_data_loaders()
 
@@ -169,7 +171,7 @@ class Pipeline:
             lr=self.params.cnn_adam_learning_rate,
             weight_decay=self.params.cnn_adam_weight_decay,
         )
-        logging.info(f"LR: {self.params.cnn_adam_learning_rate} | WD: {self.params.cnn_adam_weight_decay}")
+        logging.info(f"LR: {self.params.cnn_adam_learning_rate} | WD: {self.params.cnn_adam_weight_decay} | Unfreeze: {self.params.unfreeze_strategy}")
         self.current_epoch = 0
 
         criterion = self.__get_criterion()
@@ -190,7 +192,9 @@ class Pipeline:
             )
 
             self.current_epoch = epoch
-            UnfreezeLayers.unfreeze_layers(model, epoch, self.params)
+
+            if self.params.unfreeze_strategy:
+                UnfreezeLayers.unfreeze_layers(model, epoch, self.params)
 
             loss, accuracy, f1 = self.__training_step(
                 epoch, model, optimizer, scheduler, criterion
