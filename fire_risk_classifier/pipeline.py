@@ -12,6 +12,7 @@ from torch.optim.lr_scheduler import LambdaLR
 
 import seaborn as sns
 import matplotlib.pyplot as plt
+from sklearn.metrics import f1_score
 from sklearn.metrics import confusion_matrix
 
 from fire_risk_classifier.dataclasses.params import Params
@@ -95,6 +96,7 @@ class Pipeline:
                     transforms.RandomHorizontalFlip(),
                     transforms.RandomVerticalFlip(),
                     transforms.RandomRotation(30),
+                    transforms.ColorJitter(brightness=0.2),
                     transforms.ToTensor(),
                     transforms.Normalize(
                         [0.5113, 0.4098, 0.3832], [0.1427, 0.1708, 0.1416]
@@ -173,17 +175,13 @@ class Pipeline:
         criterion = self.__get_criterion()
         scheduler = self.__get_scheduler(optimizer)
 
-        best_val_acc = 0
+        best_val_loss = 0
         early_stop_counter = 0
 
         # Load saved model weights
         self.__load_model_weights(model)
-        epoch_data = {
-            "train_loss": [],
-            "train_accuracy": [],
-            "val_loss": [],
-            "val_accuracy": [],
-        }
+        epoch_data = self.__get_init_epoch_data()
+
         temp_best_model = None
 
         for epoch in range(self.params.cnn_epochs):
@@ -194,24 +192,21 @@ class Pipeline:
             self.current_epoch = epoch
             UnfreezeLayers.unfreeze_layers(model, epoch, self.params)
 
-            loss, accuracy = self.__training_step(
+            loss, accuracy, f1 = self.__training_step(
                 epoch, model, optimizer, scheduler, criterion
             )
             torch.cuda.empty_cache()
-            val_loss, val_accuracy = self.__validation_step(model, criterion)
+            val_loss, val_accuracy, val_f1 = self.__validation_step(model, criterion)
             torch.cuda.empty_cache()
 
             logging.info(
                 f"End of Epoch Memory Allocated: {torch.cuda.memory_allocated() / 1e9:.2f} GB | Reserved: {torch.cuda.memory_reserved() / 1e9:.2f} GB"
             )
 
-            epoch_data["train_loss"].append(loss)
-            epoch_data["train_accuracy"].append(accuracy)
-            epoch_data["val_loss"].append(val_loss)
-            epoch_data["val_accuracy"].append(val_accuracy)
+            self.__append_epoch_data(epoch_data, loss, accuracy, f1, val_loss, val_accuracy, val_f1)
 
-            if val_accuracy > best_val_acc:
-                best_val_acc = val_accuracy
+            if val_loss > best_val_loss:
+                best_val_loss = val_loss
                 early_stop_counter = 0
                 temp_best_model = model
             else:
@@ -219,7 +214,7 @@ class Pipeline:
 
             if early_stop_counter >= self.params.patience:
                 logging.info(
-                    f"Early stopping at Epoch {epoch+1} (Best Val Accuracy: {best_val_acc:.2f}%)"
+                    f"Early stopping at Epoch {epoch+1} (Best Val Loss: {best_val_loss:.2f}%)"
                 )
                 break
 
@@ -273,6 +268,9 @@ class Pipeline:
         total_steps = len(self.data_loader)
         scaler = torch.cuda.amp.GradScaler()
 
+        all_labels = []
+        all_predictions = []
+
         for step, (images, labels) in enumerate(self.data_loader):
             images, labels = images.to(self.device), labels.to(self.device)
             optimizer.zero_grad()
@@ -298,6 +296,9 @@ class Pipeline:
                 )
                 total_samples += labels.size(0)
 
+            all_labels.extend(labels.cpu().numpy())
+            all_predictions.extend(predicted.cpu().numpy())
+
             logging.info(
                 f"Epoch [{epoch + 1}/{self.params.cnn_epochs}], "
                 f"Step [{step + 1}/{total_steps}], "
@@ -306,9 +307,10 @@ class Pipeline:
                 f"LR: {scheduler.get_last_lr()[0]}"
             )
 
+        f1 = f1_score(all_labels, all_predictions, average="binary" if self.params.num_labels == 2 else "macro")
         avg_loss = running_loss / total_steps
         accuracy = 100 * correct_predictions / total_samples
-        return avg_loss, accuracy
+        return avg_loss, accuracy, f1
 
     def test_cnn(
         self, plot_confusion_matrix: bool = True, log_info: bool = True
@@ -331,7 +333,7 @@ class Pipeline:
         with torch.no_grad():  # Disable gradient computation for testing
             for step, (images, labels) in enumerate(
                 self.test_data_loader
-            ):  # Use test data loader
+            ):
                 images, labels = images.to(self.device), labels.to(self.device)
 
                 outputs = model(images)
@@ -339,18 +341,17 @@ class Pipeline:
                 total_loss += loss.item()
 
                 if self.params.num_labels > 2:
-                    predicted = torch.argmax(outputs, dim=1)  # Multi-class
+                    predicted = torch.argmax(outputs, dim=1)
                 else:
                     predicted = (
                         torch.sigmoid(outputs) >= 0.5
-                    ).float()  # Binary classification
+                    ).float()
 
                 correct_predictions += (
                     (predicted.view(-1) == labels.view(-1)).sum().item()
                 )
                 total_samples += labels.size(0)
 
-                # Append for confusion matrix
                 all_labels.extend(labels.cpu().numpy())
                 all_predictions.extend(
                     predicted.view(-1).cpu().numpy().astype(int).tolist()
@@ -385,15 +386,14 @@ class Pipeline:
 
     def __get_scheduler(self, optimizer: optim.Optimizer) -> LambdaLR:
         def lr_lambda(step: int) -> float:
-            """Smoothly adjusts the learning rate across training phases."""
             epoch_fraction = self.current_epoch / self.params.cnn_epochs
 
-            if epoch_fraction < 0.15:  # 🔥 Warmup: Gradually increase
-                return 0.3 + 0.7 * (epoch_fraction / 0.15)  # Linear warmup to full LR
-            elif epoch_fraction < 0.5:  # 🔥 Main training phase
-                return 1.0  # Keep LR stable
-            else:  # 🔥 Decay phase using cosine annealing
-                return 0.5 * (1 + np.cos(np.pi * (epoch_fraction - 0.5) / 0.5))  # Cosine decay
+            if epoch_fraction < 0.15:
+                return 0.3 + 0.7 * (epoch_fraction / 0.15)
+            elif epoch_fraction < 0.5:
+                return 1.0
+            else:
+                return 0.5 * (1 + np.cos(np.pi * (epoch_fraction - 0.5) / 0.5))
 
         return LambdaLR(optimizer, lr_lambda=lr_lambda)
 
@@ -435,6 +435,9 @@ class Pipeline:
         running_loss = 0.0
         correct_predictions = 0
 
+        all_labels = []
+        all_predictions = []
+
         with torch.no_grad():
             for images, labels in self.val_data_loader:
                 images, labels = images.to(self.device), labels.to(self.device)
@@ -456,9 +459,31 @@ class Pipeline:
                 )
                 total_samples += labels.size(0)
 
+                all_labels.extend(labels.cpu().numpy())
+                all_predictions.extend(predicted.cpu().numpy())
+
+        f1 = f1_score(all_labels, all_predictions, average="binary" if self.params.num_labels == 2 else "macro")
         avg_loss = running_loss / len(self.val_data_loader)
         accuracy = 100 * correct_predictions / total_samples
         logging.info(
-            f"Validation Loss: {avg_loss:.4f} | Validation Accuracy: {accuracy:.2f}%"
+            f"Validation Loss: {avg_loss:.4f} | Validation Accuracy: {accuracy:.2f}% | Validation F1: {f1:.4f}"
         )
-        return avg_loss, accuracy
+        return avg_loss, accuracy, f1
+
+    def __get_init_epoch_data(self) -> dict:
+        return {
+            "train_loss": [],
+            "train_accuracy": [],
+            "train_f1_score": [],
+            "val_loss": [],
+            "val_accuracy": [],
+            "val_f1_score": [],
+        }
+    
+    def __append_epoch_data(self, epoch_data: dict[str, list], loss: float, accuracy: float, f1: float, val_loss: float, val_acc: float, val_f1: float):
+        epoch_data["train_loss"].append(loss)
+        epoch_data["train_accuracy"].append(accuracy)
+        epoch_data["train_f1_score"].append(f1)
+        epoch_data["val_loss"].append(val_loss)
+        epoch_data["val_accuracy"].append(val_acc)
+        epoch_data["val_f1_score"].append(val_f1)

@@ -2,7 +2,7 @@ import os
 import csv
 import random
 from typing import Any
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 
 RANDOM_SEED = 15
@@ -18,6 +18,11 @@ def get_all_points() -> list[dict[str, Any]]:
     with open("labels.csv", mode="r") as csv_file:
         csv_reader = csv.DictReader(csv_file)
         points.extend(iter(csv_reader))
+
+    fire_risk_counts = Counter(point["fire_risk"] for point in points)
+    print("Fire Risk Distribution:")
+    for risk, count in sorted(fire_risk_counts.items(), key=lambda x: int(x[0])):
+        print(f"Risk Level {risk}: {count} occurrences")
     return points
 
 
@@ -69,6 +74,7 @@ def main():
     random.seed(RANDOM_SEED)
 
     all_points = get_all_points()
+    return
     random.shuffle(all_points)
 
     train_size = int(len(all_points) * TRAIN_RATIO)

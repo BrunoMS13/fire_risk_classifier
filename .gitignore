@@ -11,3 +11,4 @@ fire_risk_classifier/data/cnn_checkpoint_weights
 *.kmz
 *.txt
 *.json
+*.png
