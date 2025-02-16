@@ -193,7 +193,7 @@ class Pipeline:
 
             self.current_epoch = epoch
 
-            if self.params.unfreeze_strategy:
+            if self.params.unfreeze_strategy == "Gradual":
                 UnfreezeLayers.unfreeze_layers(model, epoch, self.params)
 
             loss, accuracy, f1 = self.__training_step(
