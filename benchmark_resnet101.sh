@@ -13,7 +13,7 @@ mkdir -p ~/models
 # Define hyperparameters to test
 LEARNING_RATES=("1e-5" "1e-4" "1e-3")  # Expanded learning rate options
 WEIGHT_DECAY="5e-4"  # Fixed weight decay for all runs
-UNFREEZING=("Nothing")
+UNFREEZING=("nothing")
 
 # Logging file
 LOG_FILE=~/models/training_results.log
@@ -23,7 +23,7 @@ echo "Experiment Results - $(date)" > $LOG_FILE
 for lr in "${LEARNING_RATES[@]}"; do
     for unfreeze in "${UNFREEZING[@]}"; do
         
-        EXP_NAME="r101_irg_wd${WEIGHT_DECAY}_lr${lr}_unfreeze${unfreeze}"
+        EXP_NAME="r101_irg_wd${WEIGHT_DECAY}_lr${lr}_${unfreeze}"
 
         echo "Training ResNet101 with lr=$lr, wd=$WEIGHT_DECAY, unfreeze=$unfreeze"
         docker run -it --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train \
