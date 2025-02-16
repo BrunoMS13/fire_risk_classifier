@@ -1,5 +1,14 @@
 #!/bin/bash
 
+cd /tmp
+
+git clone https://github.com/BrunoMS13/fire_risk_classifier.git
+
+cd fire_risk_classifier
+
+mkdir -p fire_risk_classifier/fire_risk_classifier/data/images && \
+cp -r ~/fire_risk_classifier/fire_risk_classifier/data/images/ortos2018-IRG-62_5m-decompressed fire_risk_classifier/fire_risk_classifier/data/images/
+
 echo "Building Docker Image..."
 docker build -t fire_risk_classifier_image .
 
@@ -30,9 +39,10 @@ for model in "${MODELS[@]}"; do
             EXP_NAME="${model}_irg_wd${WEIGHT_DECAY}_lr${lr}_patience8"
 
             echo "Training $model with lr=$lr, wd=$WEIGHT_DECAY, unfreeze=$unfreeze"
-            docker run -it --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train \
+            docker run --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train \
                 --algorithm $model --batch_size 16 --train True --num_epochs 18 --num_classes $NUM_CLASSES \
                 --images_dir $IMAGE_DIR --wd $WEIGHT_DECAY --lr $lr --unfreeze $unfreeze --save_as $EXP_NAME
+
 
             echo "Copying Results for $EXP_NAME..."
             cp -r $WEIGHTS_PATH/$EXP_NAME.pth ~/models
