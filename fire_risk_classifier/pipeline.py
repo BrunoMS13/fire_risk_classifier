@@ -209,7 +209,7 @@ class Pipeline:
 
             self.__append_epoch_data(epoch_data, loss, accuracy, f1, val_loss, val_accuracy, val_f1)
 
-            if val_loss > best_val_loss:
+            if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 early_stop_counter = 0
                 temp_best_model = model
