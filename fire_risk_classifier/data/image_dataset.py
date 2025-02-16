@@ -4,15 +4,14 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 from torch.utils.data import Dataset
-from torchvision.io import read_image
-import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
 
+# Path for IRG images (used to compute NDVI)
+IRG_IMG_PATH = "fire_risk_classifier/data/images/ortos2018-IRG-62_5m-decompressed"
 
 class CustomImageDataset(Dataset):
     def __init__(
         self,
-        img_dir: str,
+        img_dir: str,  # Now takes RGB path
         annotations_file: str,
         transform=None,
         normalize_transform=None,
@@ -33,15 +32,18 @@ class CustomImageDataset(Dataset):
         self.class2idx = {self.classes[i]: i for i in range(len(self.classes))}
         self.idx2class = {i: self.classes[i] for i in range(len(self.classes))}
 
-        # Compute NDVI statistics
-        self.ndvi_mean, self.ndvi_std = self.__compute_ndvi_stats()
+        # Compute NDVI statistics from IRG images
+        if self.ndvi_index:
+            self.ndvi_mean, self.ndvi_std = self.__compute_ndvi_stats()
 
     def __len__(self):
         return len(self.img_labels)
 
     def __getitem__(self, idx: int):
-        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0] + ".png")
-        image = Image.open(img_path).convert("RGB")
+        img_name = self.img_labels.iloc[idx, 0] + ".png"
+
+        img_path = os.path.join(self.img_dir, img_name)
+        rgb_image = Image.open(img_path).convert("RGB")
 
         if self.task == "classification":
             label = self.class2idx[self.img_labels_dict[self.img_labels.iloc[idx, 0]]]
@@ -50,32 +52,40 @@ class CustomImageDataset(Dataset):
 
         # Apply transforms before NDVI
         if self.transform:
-            image = self.transform(image)
+            rgb_image = self.transform(rgb_image)
 
-        # Compute NDVI before normalizing
+        # Compute NDVI from IRG image
         if self.ndvi_index:
-            ndvi = self.__compute_ndvi(image)
-            image = torch.cat((image, ndvi.unsqueeze(0)), dim=0)
+            irg_path = os.path.join(IRG_IMG_PATH, img_name)
+            irg_image = Image.open(irg_path).convert("RGB")  # IRG images stored as RGB format
+            irg_image = self.transform(irg_image)  # Ensure same transformations are applied
+            ndvi = self.__compute_ndvi(irg_image)  # Compute NDVI from IRG image
+            rgb_image = torch.cat((rgb_image, ndvi.unsqueeze(0)), dim=0)  # Append NDVI as 4th channel
 
         # Normalize
         if self.normalize_transform:
-            image = self.normalize_transform(image)
+            rgb_image = self.normalize_transform(rgb_image)
 
-        return image, label
+        return rgb_image, label
 
-    def __compute_ndvi(self, image):
-        infrared = image[0, :, :]
-        red = image[2, :, :]
+    def __compute_ndvi(self, irg_image):
+        infrared = irg_image[0, :, :]  # IR channel (R in IRG image)
+        red = irg_image[2, :, :]  # Red channel (B in IRG image)
         epsilon = 1e-6
-        ndvi = (infrared - red) / (infrared + red + epsilon)
-        return (ndvi - self.ndvi_mean) / self.ndvi_std
+        ndvi = (infrared - red) / (infrared + red + epsilon)  # Compute NDVI
+        return (ndvi - self.ndvi_mean) / self.ndvi_std  # Normalize NDVI
 
     def __compute_ndvi_stats(self):
         ndvi_values = []
         for i in range(len(self)):
-            img, _ = self[i]  # Get image tensor
-            infrared = img[0, :, :].numpy().flatten()
-            red = img[2, :, :].numpy().flatten()
+            img_name = self.img_labels.iloc[i, 0] + ".png"
+            irg_path = os.path.join(IRG_IMG_PATH, img_name)
+            
+            irg_image = Image.open(irg_path).convert("RGB")
+            irg_tensor = torch.tensor(np.array(irg_image)).permute(2, 0, 1) / 255.0  # Convert to tensor
+
+            infrared = irg_tensor[0, :, :].numpy().flatten()
+            red = irg_tensor[2, :, :].numpy().flatten()
             ndvi = (infrared - red) / (infrared + red + 1e-6)
             ndvi_values.extend(ndvi)
 
