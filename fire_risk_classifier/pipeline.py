@@ -177,7 +177,7 @@ class Pipeline:
         criterion = self.__get_criterion()
         scheduler = self.__get_scheduler(optimizer)
 
-        best_val_loss = 0
+        best_val_loss = 1
         early_stop_counter = 0
 
         # Load saved model weights
