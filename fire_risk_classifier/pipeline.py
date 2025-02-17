@@ -370,9 +370,11 @@ class Pipeline:
 
         final_loss = total_loss / len(self.test_data_loader)
         final_accuracy = 100 * correct_predictions / total_samples
+        f1 = f1_score(all_labels, all_predictions, average="binary" if self.params.num_labels == 2 else "macro")
 
         logging.info(f"Final Test Loss: {final_loss:.4f}")
         logging.info(f"Final Test Accuracy: {final_accuracy:.2f}%")
+        logging.info(f"Final Test F1: {f1:.4f}")
 
         if plot_confusion_matrix:
             self.__plot_confusion_matrix(all_labels, all_predictions)

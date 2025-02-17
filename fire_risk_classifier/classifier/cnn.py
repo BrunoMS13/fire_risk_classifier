@@ -13,7 +13,7 @@ def get_cnn_model(params: Params) -> nn.Module:
     match algorithm:
         case "resnet50" | "resnet101" | "resnet152":
             return get_resnet_model(params)
-        case "densenet161" | "densenet169" | "densenet201":
+        case "densenet121" | "densenet161" | "densenet169" | "densenet201":
             return get_densenet_model(params)
         case (
             "efficientnet_b4"
@@ -63,6 +63,8 @@ def get_resnet_model(params: Params) -> models.ResNet:
 def get_densenet_model(params: Params) -> models.DenseNet:
     algorithm = params.algorithm
     match algorithm:
+        case "densenet121":
+            base_model = models.densenet121(weights=models.DenseNet121_Weights.DEFAULT)
         case "densenet161":
             base_model = models.densenet161(weights=models.DenseNet161_Weights.DEFAULT)
         case "densenet169":

@@ -1,7 +1,7 @@
 import csv
-from matplotlib import pyplot as plt
 import numpy as np
 from collections import Counter
+from matplotlib import pyplot as plt
 
 from sklearn.metrics import confusion_matrix
 
@@ -10,14 +10,14 @@ from fire_risk_classifier.utils.logger import Logger
 from fire_risk_classifier.dataclasses.params import Params
 
 irg_model_names = [
-    "d161_wd5e4_lr5e4.pth",
-    "r101_wd5e4_lr5e4.pth",
-    "eb5_wd3e4_lr1e4.pth",
+    "densenet161_irg_wd5e-4_lr1e-4_patience8.pth",
+    "densenet161_irg_wd5e-4_lr1e-5_patience8.pth",
+    "densenet161_irg_wd5e-4_lr5e-5_patience8.pth",
+    "densenet161_irg_wd5e-4_lr5e-6_patience8.pth",
+    "densenet161_irg_wd5e-4_lr1e-6_patience8.pth",
+    "densenet161_irg_wd5e-4_lr5e-7_patience8.pth",
 ]
 rgb_model_names = [
-    "d161_rgb_wd5e4_lr5e4.pth",
-    "r101_rgb_wd5e4_lr5e4.pth",
-    "eb5_rgb_wd3e4_lr1e4.pth",
 ]
 
 NUM_CLASSES = 2
@@ -56,7 +56,7 @@ def get_predictions(model: str, params: Params) -> list:
     elif "eb" in first_part:
         algo = "efficientnet_b5"
     elif "r" in first_part:
-        algo = "resnet101"
+        algo = "resnet50"
     args = {
         "test": True,
         "train": True,
@@ -95,7 +95,7 @@ def write_results(results: list, is_irg: bool):
 
 
 def main():
-    """all_labels_combined = None
+    all_labels_combined = None
     all_predictions_combined = []
     Logger.initialize_logger()
 
@@ -128,7 +128,7 @@ def main():
     accuracy = sum(
         l == p for l, p in zip(all_labels_combined, final_predictions)
     ) / len(all_labels_combined)
-    print(f"Combined Accuracy: {accuracy:.2%}")"""
+    print(f"Combined Accuracy: {accuracy:.2%}")
 
     # write_final_predictions("final_predictions.csv", all_labels_combined, final_predictions, confidences)
     # print("Final predictions written to final_predictions.csv")
@@ -182,7 +182,7 @@ def main():
         for label, pred, conf in zip(all_labels_combined, final_predictions, confidences):
             writer.writerow([label, pred, conf])
 
-    print(f"Final predictions written to {output_file}")"""
+    print(f"Final predictions written to {output_file}")
     import pandas as pd
     import numpy as np
     import matplotlib.pyplot as plt
@@ -191,11 +191,9 @@ def main():
     from sklearn.metrics import confusion_matrix
 
     def load_data(file_path):
-        """Load a single .txt file and return a DataFrame."""
         return pd.read_csv(file_path)
 
     def save_confusion_matrix(y_true, y_pred, class_names, file_name, folder_path):
-        """Generate and save a confusion matrix as an image for a specific file."""
         cm = confusion_matrix(y_true, y_pred)
         plt.figure(figsize=(5, 4))
         sns.heatmap(
@@ -237,7 +235,7 @@ def main():
             save_confusion_matrix(
                 y_true, y_pred, class_names, file.replace(".txt", ""), folder_path
             )
-
+    """
 
 if __name__ == "__main__":
     main()

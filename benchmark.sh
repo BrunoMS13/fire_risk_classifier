@@ -29,7 +29,7 @@ NUM_CLASSES=2
 mkdir -p ~/models
 
 # Define hyperparameters to test
-LEARNING_RATES=("1e-6" "5e-7")  # Only these LRs for new models
+LEARNING_RATES=("1e-4" "5e-5" "1e-5" "5e-6")  # Only these LRs for new models
 WEIGHT_DECAY="5e-4"  # Fixed weight decay for all runs
 UNFREEZING=("nothing")
 
@@ -38,7 +38,7 @@ LOG_FILE=~/models/training_results.log
 echo "Experiment Results - $(date)" > $LOG_FILE
 
 # Model architectures to train
-MODELS=("densenet161" "efficientnet_b4" "efficientnet_b5")
+MODELS=("densenet121")
 
 # Loop through models, learning rates, and unfreezing strategies
 for model in "${MODELS[@]}"; do
@@ -49,7 +49,7 @@ for model in "${MODELS[@]}"; do
 
             echo "Training $model with lr=$lr, wd=$WEIGHT_DECAY, unfreeze=$unfreeze"
             docker run --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train \
-                --algorithm $model --batch_size 16 --train True --num_epochs 18 --num_classes $NUM_CLASSES \
+                --algorithm $model --batch_size 16 --train True --num_epochs 50 --num_classes $NUM_CLASSES \
                 --images_dir $IMAGE_DIR --wd $WEIGHT_DECAY --lr $lr --unfreeze $unfreeze --save_as $EXP_NAME
 
 
