@@ -10,12 +10,10 @@ from fire_risk_classifier.utils.logger import Logger
 from fire_risk_classifier.dataclasses.params import Params
 
 irg_model_names = [
-    "densenet161_irg_wd5e-4_lr1e-4_patience8.pth",
-    "densenet161_irg_wd5e-4_lr1e-5_patience8.pth",
-    "densenet161_irg_wd5e-4_lr5e-5_patience8.pth",
-    "densenet161_irg_wd5e-4_lr5e-6_patience8.pth",
-    "densenet161_irg_wd5e-4_lr1e-6_patience8.pth",
-    "densenet161_irg_wd5e-4_lr5e-7_patience8.pth",
+    "efficientnet_b5_irg_wd5e-4_lr1e-4_patience8.pth",
+    "efficientnet_b5_irg_wd5e-4_lr1e-5_patience8.pth",
+    "efficientnet_b5_irg_wd5e-4_lr5e-5_patience8.pth",
+    "efficientnet_b5_irg_wd5e-4_lr5e-6_patience8.pth",
 ]
 rgb_model_names = [
 ]
@@ -52,8 +50,8 @@ def get_predictions(model: str, params: Params) -> list:
     """Runs the pipeline synchronously and gets predictions."""
     first_part = model.split("_")[0]
     if "d" in first_part:
-        algo = "densenet161"
-    elif "eb" in first_part:
+        algo = "densenet121"
+    elif "eff" in first_part:
         algo = "efficientnet_b5"
     elif "r" in first_part:
         algo = "resnet50"
