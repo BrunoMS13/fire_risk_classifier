@@ -4,10 +4,10 @@ cd /tmp
 
 git clone https://github.com/BrunoMS13/fire_risk_classifier.git
 
-cd fire_risk_classifier
-
 mkdir -p fire_risk_classifier/fire_risk_classifier/data/images && \
 cp -r ~/fire_risk_classifier/fire_risk_classifier/data/images/ortos2018-IRG-62_5m-decompressed fire_risk_classifier/fire_risk_classifier/data/images/
+
+cd fire_risk_classifier
 
 # Check if the Docker image exists before trying to remove it
 if docker image inspect fire_risk_classifier_image > /dev/null 2>&1; then
@@ -29,7 +29,7 @@ NUM_CLASSES=2
 mkdir -p ~/models
 
 # Define hyperparameters to test
-LEARNING_RATES=("1e-4" "1e-5" "5e-5" "5e-6")  # Only these LRs for new models
+LEARNING_RATES=("1e-6" "5e-7")  # Only these LRs for new models
 WEIGHT_DECAY="5e-4"  # Fixed weight decay for all runs
 UNFREEZING=("nothing")
 
