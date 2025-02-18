@@ -216,7 +216,7 @@ class Pipeline:
         # Save metrics
         metrics_path = os.path.join(
             self.params.directories["cnn_checkpoint_weights"],
-            f"{self.__create_model_name()}_metrics.json",
+            f"{self.__create_model_name(extra_info)}_metrics.json",
         )
         if not epoch_data:
             return

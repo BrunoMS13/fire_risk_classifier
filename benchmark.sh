@@ -4,8 +4,10 @@ cd /tmp
 
 git clone https://github.com/BrunoMS13/fire_risk_classifier.git
 
-mkdir -p fire_risk_classifier/fire_risk_classifier/data/images && \
+# Create image directory and copy both IRG and RGB images
+mkdir -p fire_risk_classifier/fire_risk_classifier/data/images
 cp -r ~/fire_risk_classifier/fire_risk_classifier/data/images/ortos2018-IRG-62_5m-decompressed fire_risk_classifier/fire_risk_classifier/data/images/
+cp -r ~/fire_risk_classifier/fire_risk_classifier/data/images/ortos2018-RGB-62_5m-decompressed fire_risk_classifier/fire_risk_classifier/data/images/
 
 cd fire_risk_classifier
 
@@ -23,45 +25,55 @@ docker build -t fire_risk_classifier_image .
 # Paths
 WEIGHTS_PATH="/tmp/fire_risk_classifier/fire_risk_classifier/data/cnn_checkpoint_weights"
 DOCKER_WEIGHTS_PATH="/app/fire_risk_classifier/data/cnn_checkpoint_weights"
-IMAGE_DIR="fire_risk_classifier/data/images/ortos2018-IRG-62_5m-decompressed"
+IMAGE_BASE_DIR="fire_risk_classifier/data/images"
 NUM_CLASSES=2
 mkdir -p ~/models
 
 # Define hyperparameters to test
-LEARNING_RATES=("1e-4" "1e-5")  # Only these LRs for new models
+LEARNING_RATES=("1e-4" "5e-5" "1e-5" "5e-6")  # Extended LR options
 WEIGHT_DECAY="0"  # Fixed weight decay for all runs
-UNFREEZING=("nothing")
 
 # Logging file
 LOG_FILE=~/models/training_results.log
 echo "Experiment Results - $(date)" > $LOG_FILE
 
 # Model architectures to train
-MODELS=("densenet161")
+MODELS=("resnet50")
 
 # Number of runs per configuration
 NUM_RUNS=2
 
-# Loop through models, learning rates, and unfreezing strategies
+# Define datasets
+DATASETS=(
+    "RGB fire_risk_classifier/data/images/ortos2018-RGB-62_5m-decompressed"
+    "IRG fire_risk_classifier/data/images/ortos2018-IRG-62_5m-decompressed"
+    "RGB_NDVI fire_risk_classifier/data/images/ortos2018-RGB-62_5m-decompressed --ndvi True"
+)
+
+# Loop through models, learning rates, datasets
 for model in "${MODELS[@]}"; do
     for lr in "${LEARNING_RATES[@]}"; do
-        for unfreeze in "${UNFREEZING[@]}"; do
-            for run in $(seq 1 $NUM_RUNS); do
-                
-                EXP_NAME="${model}_irg_wd${WEIGHT_DECAY}_lr${lr}_run${run}"
+        for dataset in "${DATASETS[@]}"; do
+            DATASET_NAME=$(echo "$dataset" | awk '{print $1}')
+            IMAGE_DIR=$(echo "$dataset" | awk '{print $2}')
+            NDVI_FLAG=$(echo "$dataset" | awk '{print $3 " " $4}')
 
-                echo "Training $model with lr=$lr, wd=$WEIGHT_DECAY, unfreeze=$unfreeze (Run $run)"
+            for run in $(seq 1 $NUM_RUNS); do
+                EXP_NAME="${model}_${DATASET_NAME}_lr${lr}_run${run}"
+                echo "Training $model on $DATASET_NAME with lr=$lr (Run $run) $NDVI_FLAG"
+
                 docker run --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train \
-                    --algorithm $model --batch_size 16 --train True --num_epochs 50 --num_classes $NUM_CLASSES \
-                    --images_dir $IMAGE_DIR --wd $WEIGHT_DECAY --lr $lr --unfreeze $unfreeze --save_as $EXP_NAME
+                    --algorithm $model --batch_size 16 --train True --num_epochs 21 --num_classes $NUM_CLASSES \
+                    --images_dir $IMAGE_DIR --wd $WEIGHT_DECAY --lr $lr --save_as $EXP_NAME $NDVI_FLAG
 
                 echo "Copying Results for $EXP_NAME..."
                 cp -r $WEIGHTS_PATH/$EXP_NAME.pth ~/models
+                cp -r $WEIGHTS_PATH/${EXP_NAME}_best_acc.pth ~/models
                 cp -r $WEIGHTS_PATH/${EXP_NAME}_metrics.json ~/models
 
                 # Log experiment results
                 echo "$EXP_NAME" >> $LOG_FILE
-                echo "Model: $model, Learning Rate: $lr, Weight Decay: $WEIGHT_DECAY, Unfreezing: $unfreeze, Run: $run" >> $LOG_FILE
+                echo "Model: $model, Dataset: $DATASET_NAME, Learning Rate: $lr, Weight Decay: $WEIGHT_DECAY, Run: $run" >> $LOG_FILE
                 echo "------------------------------------" >> $LOG_FILE
 
             done
