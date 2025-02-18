@@ -149,6 +149,7 @@ class Pipeline:
         criterion = self.__get_criterion()
         scheduler = self.__get_scheduler(optimizer)
 
+        best_val_acc = 0
         best_val_loss = 1
         early_stop_counter = 0
 
@@ -157,6 +158,7 @@ class Pipeline:
         epoch_data = self.__get_init_epoch_data()
 
         temp_best_model = None
+        temp_best_acc_model = None
 
         for epoch in range(self.params.cnn_epochs):
             logging.info(
@@ -168,25 +170,27 @@ class Pipeline:
             if self.params.unfreeze_strategy == "Gradual":
                 UnfreezeLayers.unfreeze_layers(model, epoch, self.params)
 
-            loss, accuracy, f1 = self.__training_step(
+            loss, accuracy = self.__training_step(
                 epoch, model, optimizer, scheduler, criterion
             )
             torch.cuda.empty_cache()
-            val_loss, val_accuracy, val_f1 = self.__validation_step(model, criterion)
+            val_loss, val_accuracy = self.__validation_step(model, criterion)
             torch.cuda.empty_cache()
 
             logging.info(
                 f"End of Epoch Memory Allocated: {torch.cuda.memory_allocated() / 1e9:.2f} GB | Reserved: {torch.cuda.memory_reserved() / 1e9:.2f} GB"
             )
 
-            self.__append_epoch_data(epoch_data, loss, accuracy, f1, val_loss, val_accuracy, val_f1)
-
+            self.__append_epoch_data(epoch_data, loss, accuracy, val_loss, val_accuracy)
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 early_stop_counter = 0
                 temp_best_model = model
             else:
                 early_stop_counter += 1
+            if val_accuracy > best_val_acc:
+                best_val_acc = val_accuracy
+                temp_best_acc_model = model
 
             if early_stop_counter >= self.params.patience:
                 logging.info(
@@ -195,15 +199,16 @@ class Pipeline:
                 break
 
         self.__save_model(temp_best_model, epoch_data)
+        self.__save_model(temp_best_acc_model, {}, "_best_acc")
 
-    def __save_model(self, model: nn.Module, epoch_data: dict):
+    def __save_model(self, model: nn.Module, epoch_data: dict, extra_info: str = ""):
         # Save model
         logging.info(
             f"Saving final model to {self.params.directories['cnn_checkpoint_weights']}"
         )
         model_path = os.path.join(
             self.params.directories["cnn_checkpoint_weights"],
-            f"{self.__create_model_name()}.pth",
+            f"{self.__create_model_name(extra_info)}.pth",
         )
         os.makedirs(self.params.directories["cnn_checkpoint_weights"], exist_ok=True)
         torch.save(model.state_dict(), model_path)
@@ -213,12 +218,14 @@ class Pipeline:
             self.params.directories["cnn_checkpoint_weights"],
             f"{self.__create_model_name()}_metrics.json",
         )
+        if not epoch_data:
+            return
         with open(metrics_path, "w") as f:
             json.dump(epoch_data, f)
 
-    def __create_model_name(self) -> str:
+    def __create_model_name(self, extra_info: str) -> str:
         if self.params.save_as:
-            return self.params.save_as
+            return self.params.save_as + extra_info
         if self.__is_body():
             return f"{self.params.algorithm}_body_2C"
         fine_tunned = "FT" if self.params.fine_tunning else "NFT"
@@ -235,31 +242,29 @@ class Pipeline:
         optimizer: optim.Optimizer,
         scheduler: LambdaLR,
         criterion: nn.Module,
-    ) -> tuple:
+    ) -> tuple[float, float]:
         model.train()
 
         total_samples = 0
         running_loss = 0.0
         correct_predictions = 0
         total_steps = len(self.data_loader)
-        scaler = torch.cuda.amp.GradScaler()
 
         all_labels = []
         all_predictions = []
-
         for step, (images, labels) in enumerate(self.data_loader):
             images, labels = images.to(self.device), labels.to(self.device)
             optimizer.zero_grad()
-            with torch.cuda.amp.autocast():
-                outputs = model(images)
-                loss = criterion(outputs, labels.unsqueeze(1).float())
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
 
+            outputs = model(images)
+            loss = criterion(outputs, labels.unsqueeze(1).float())
+
+            loss.backward()
+            optimizer.step()
             scheduler.step()
 
             running_loss += loss.item()
+
 
             with torch.no_grad():
                 if self.params.num_labels > 2:
@@ -275,18 +280,18 @@ class Pipeline:
             all_labels.extend(labels.cpu().numpy())
             all_predictions.extend(predicted.cpu().numpy())
 
-            logging.info(
-                f"Epoch [{epoch + 1}/{self.params.cnn_epochs}], "
-                f"Step [{step + 1}/{total_steps}], "
-                f"Loss: {running_loss / (step + 1):.4f}, "
-                f"Accuracy: {100 * correct_predictions / total_samples:.2f}%, "
-                f"LR: {scheduler.get_last_lr()[0]}"
-            )
+            if step % 5 == 0 or step == total_steps - 1:
+                logging.info(
+                    f"Epoch [{epoch + 1}/{self.params.cnn_epochs}], "
+                    f"Step [{step + 1}/{total_steps}], "
+                    f"Loss: {running_loss / (step + 1):.4f}, "
+                    f"Accuracy: {100 * correct_predictions / total_samples:.2f}%, "
+                    f"LR: {scheduler.get_last_lr()[0]}"
+                )
 
-        f1 = f1_score(all_labels, all_predictions, average="binary" if self.params.num_labels == 2 else "macro")
         avg_loss = running_loss / total_steps
         accuracy = 100 * correct_predictions / total_samples
-        return avg_loss, accuracy, f1
+        return avg_loss, accuracy
 
     def test_cnn(
         self, plot_confusion_matrix: bool = True, log_info: bool = True
@@ -407,7 +412,7 @@ class Pipeline:
         plt.title("Confusion Matrix")
         plt.show()
 
-    def __validation_step(self, model: nn.Module, criterion: nn.Module) -> tuple:
+    def __validation_step(self, model: nn.Module, criterion: nn.Module) -> tuple[float, float]:
         model.eval()  # Set model to evaluation mode
 
         total_samples = 0
@@ -441,28 +446,23 @@ class Pipeline:
                 all_labels.extend(labels.cpu().numpy())
                 all_predictions.extend(predicted.cpu().numpy())
 
-        f1 = f1_score(all_labels, all_predictions, average="binary" if self.params.num_labels == 2 else "macro")
         avg_loss = running_loss / len(self.val_data_loader)
         accuracy = 100 * correct_predictions / total_samples
         logging.info(
-            f"Validation Loss: {avg_loss:.4f} | Validation Accuracy: {accuracy:.2f}% | Validation F1: {f1:.4f}"
+            f"Validation Loss: {avg_loss:.4f} | Validation Accuracy: {accuracy:.2f}%"
         )
-        return avg_loss, accuracy, f1
+        return avg_loss, accuracy
 
     def __get_init_epoch_data(self) -> dict:
         return {
             "train_loss": [],
             "train_accuracy": [],
-            "train_f1_score": [],
             "val_loss": [],
             "val_accuracy": [],
-            "val_f1_score": [],
         }
     
-    def __append_epoch_data(self, epoch_data: dict[str, list], loss: float, accuracy: float, f1: float, val_loss: float, val_acc: float, val_f1: float):
+    def __append_epoch_data(self, epoch_data: dict[str, list], loss: float, accuracy: float, val_loss: float, val_acc: float):
         epoch_data["train_loss"].append(loss)
         epoch_data["train_accuracy"].append(accuracy)
-        epoch_data["train_f1_score"].append(f1)
         epoch_data["val_loss"].append(val_loss)
         epoch_data["val_accuracy"].append(val_acc)
-        epoch_data["val_f1_score"].append(val_f1)

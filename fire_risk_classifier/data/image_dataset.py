@@ -24,7 +24,6 @@ class CustomImageDataset(Dataset):
         classes = sorted(self.img_labels.iloc[:, 1].unique())
         self.img_dir = img_dir
         self.transform = transform
-        self.task = task.lower()
         self.ndvi_index = ndvi_index
         self.normalize_transform = self.__get_normalize_transform()
 

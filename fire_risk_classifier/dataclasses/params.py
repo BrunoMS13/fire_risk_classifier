@@ -38,7 +38,7 @@ class Params:
         self.generator = "flip"
 
         self.fine_tunning = False
-        self.unfreeze_strategy = "Gradual"
+        self.unfreeze_strategy = "nothing"
 
         # LEARNING PARAMS
         self.cnn_adam_learning_rate = 1e-4
