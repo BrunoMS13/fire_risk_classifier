@@ -1,6 +1,8 @@
 import torch
-from torch.utils.data import DataLoader
 from torchvision import transforms
+from torch.utils.data import DataLoader
+from fire_risk_classifier.data.image_dataset import CustomImageDataset
+
 
 def compute_mean_std(dataset):
     loader = DataLoader(dataset, batch_size=64, shuffle=False)
@@ -19,3 +21,20 @@ def compute_mean_std(dataset):
     mean /= num_samples
     std /= num_samples
     return mean.tolist(), std.tolist()
+
+
+transform = transforms.Compose(
+    [
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomVerticalFlip(),
+        transforms.RandomRotation(30),
+        transforms.ColorJitter(brightness=0.2),
+        transforms.ToTensor(),
+    ]
+)
+
+img_dir = "fire_risk_classifier/data/images/ortos2018-IRG-62_5m-decompressed"
+annotations_file = "fire_risk_classifier/data/csvs/train_2classes.csv"
+
+# Training data loader
+dataset = CustomImageDataset(img_dir, annotations_file, transform, False)

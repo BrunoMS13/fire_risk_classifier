@@ -92,75 +92,47 @@ class Pipeline:
     def __init_train_and_val_dataloaders(
         self, directories: dict[str, str], batch_size: int
     ):
-        if self.params.train_cnn:
-            transform = transforms.Compose(
-                [
-                    transforms.RandomHorizontalFlip(),
-                    transforms.RandomVerticalFlip(),
-                    transforms.RandomRotation(30),
-                    transforms.ColorJitter(brightness=0.2),
-                    transforms.ToTensor(),
-                    transforms.Normalize(
-                        [0.5113, 0.4098, 0.3832], [0.1427, 0.1708, 0.1416]
-                    ),
-                ]
-            )
-
-            # Training data loader
-            self.dataset = CustomImageDataset(
-                directories["images_directory"],
-                directories["annotations_file"],
-                transform=transform,
-                ndvi_index=self.params.calculate_ndvi_index,
-                normalize_transform=self.__get_normalize_transform(),
-            )
-            train_size = int(0.8 * len(self.dataset))
-            val_size = len(self.dataset) - train_size
-            train_dataset, val_dataset = torch.utils.data.random_split(
-                self.dataset, [train_size, val_size]
-            )
-
-            # Assign training dataloader (80% data)
-            self.data_loader = DataLoader(
-                train_dataset, batch_size=batch_size, shuffle=True
-            )
-
-            # Assign validation dataloader (20% data)
-            self.val_data_loader = DataLoader(
-                val_dataset, batch_size=batch_size, shuffle=False
-            )
-
-    def __init_test_dataloader(self, directories: dict[str, str], batch_size: int):
         transform = transforms.Compose(
             [
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomVerticalFlip(),
+                transforms.RandomRotation(30),
+                transforms.ColorJitter(brightness=0.2),
                 transforms.ToTensor(),
-                transforms.Normalize(
-                    [0.5113, 0.4098, 0.3832], [0.1427, 0.1708, 0.1416]
-                ),
             ]
         )
 
+        # Training data loader
+        self.dataset = CustomImageDataset(
+            directories["images_directory"],
+            directories["annotations_file"],
+            transform=transform,
+            ndvi_index=self.params.calculate_ndvi_index,
+        )
+        train_size = int(0.8 * len(self.dataset))
+        val_size = len(self.dataset) - train_size
+        train_dataset, val_dataset = torch.utils.data.random_split(
+            self.dataset, [train_size, val_size]
+        )
+
+        self.data_loader = DataLoader(
+            train_dataset, batch_size=batch_size, shuffle=True
+        )
+        self.val_data_loader = DataLoader(
+            val_dataset, batch_size=batch_size, shuffle=False
+        )
+
+    def __init_test_dataloader(self, directories: dict[str, str], batch_size: int):
         # Testing data loader
         self.test_dataset = CustomImageDataset(
             directories["images_directory"],
             directories["testing_annotations_file"],
-            transform=transform,
             ndvi_index=self.params.calculate_ndvi_index,
-            normalize_transform=self.__get_normalize_transform(),
         )
         self.test_data_loader = DataLoader(
             self.test_dataset, batch_size=batch_size, shuffle=False
         )
 
-    def __get_normalize_transform(self) -> transforms.Normalize:
-        dataset_mean = [0.5113, 0.4098, 0.3832]
-        dataset_std = [0.1427, 0.1708, 0.1416]
-
-        return (
-            transforms.Normalize(mean=dataset_mean + [0.0], std=dataset_std + [1.0])
-            if self.params.calculate_ndvi_index
-            else transforms.Normalize(mean=dataset_mean, std=dataset_std)
-        )
 
     # ------------------- Training and Testing ------------------- #
 

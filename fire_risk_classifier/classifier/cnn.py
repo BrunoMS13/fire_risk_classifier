@@ -177,20 +177,13 @@ def __adapt_model_to_ndvi(base_model: nn.Module):
         bias=bias,
     )
 
-    # Initialize weights: Copy RGB weights & duplicate Red weights for NDVI
     with torch.no_grad():
-        # IRG: Map pretrained weights from RGB -> IRG
-        new_conv.weight[:, 0, :, :].copy_(
-            first_layer.weight[:, 2, :, :]
-        )  # Map Red → IR (assuming NIR replaces Blue)
-        new_conv.weight[:, 1, :, :].copy_(
-            first_layer.weight[:, 0, :, :]
-        )  # Map Green → Red
-        new_conv.weight[:, 2, :, :].copy_(
-            first_layer.weight[:, 1, :, :]
-        )  # Map Blue → Green (now it's R → G)
+        # Maintain the original RGB mapping
+        new_conv.weight[:, 0, :, :].copy_(first_layer.weight[:, 0, :, :])  # R → R
+        new_conv.weight[:, 1, :, :].copy_(first_layer.weight[:, 1, :, :])  # G → G
+        new_conv.weight[:, 2, :, :].copy_(first_layer.weight[:, 2, :, :])  # B → B
 
-        # NDVI: Initialize based on Red (or custom init)
+        # NDVI: Initialize based on Red (or use a different strategy if needed)
         new_conv.weight[:, 3, :, :].copy_(
             first_layer.weight[:, 0, :, :]
         )  # Copy Red weights for NDVI
