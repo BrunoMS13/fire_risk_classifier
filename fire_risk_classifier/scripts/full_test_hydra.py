@@ -9,18 +9,16 @@ from fire_risk_classifier.pipeline import Pipeline
 from fire_risk_classifier.utils.logger import Logger
 from fire_risk_classifier.dataclasses.params import Params
 
-irg_model_names = [
-    "efficientnet_b5_irg_wd5e-4_lr1e-4_patience8.pth",
-    "efficientnet_b5_irg_wd5e-4_lr1e-5_patience8.pth",
-    "efficientnet_b5_irg_wd5e-4_lr5e-5_patience8.pth",
-    "efficientnet_b5_irg_wd5e-4_lr5e-6_patience8.pth",
-]
-rgb_model_names = [
+irg_model_names = [] 
+rgb_model_names = []
+rgb_ndvi_model_names = [
+    "test.pth"
 ]
 
 NUM_CLASSES = 2
 CALCULATE_IRG = True
 CALCULATE_RGB = True
+CALCULATE_RGB_NDVI = True
 
 
 def majority_vote(all_predictions_list):
@@ -50,11 +48,13 @@ def get_predictions(model: str, params: Params) -> list:
     """Runs the pipeline synchronously and gets predictions."""
     first_part = model.split("_")[0]
     if "d" in first_part:
-        algo = "densenet121"
+        algo = "densenet161"
     elif "eff" in first_part:
         algo = "efficientnet_b5"
     elif "r" in first_part:
         algo = "resnet50"
+    elif "test" in first_part:
+        algo = "densenet161"
     args = {
         "test": True,
         "train": True,
@@ -65,21 +65,15 @@ def get_predictions(model: str, params: Params) -> list:
     return pipeline.test_cnn(plot_confusion_matrix=False, log_info=False)
 
 
-def get_params(is_irg: bool) -> Params:
+def get_params(is_irg: bool, is_ndvi: bool = False) -> Params:
     params = Params()
-
-    base_path = "fire_risk_classifier/data/cnn_checkpoint_weights"
-    colorspace = "IRG" if is_irg else "RGB"
-    checkpoint_path = f"{base_path}/{colorspace}"
-    params.directories["cnn_checkpoint_weights"] = checkpoint_path
-
     base_images_path = "fire_risk_classifier/data/images/"
     params.directories["images_directory"] = (
         f"{base_images_path}ortos2018-IRG-62_5m-decompressed"
         if is_irg
         else f"{base_images_path}ortos2018-RGB-62_5m-decompressed"
     )
-
+    params.calculate_ndvi_index = is_ndvi
     return params
 
 
@@ -101,32 +95,43 @@ def main():
         # Run all pipelines and collect results
         params = get_params(is_irg=True)
         results = [get_predictions(model, params) for model in irg_model_names]
-        write_results(results, is_irg=True)
+        #write_results(results, is_irg=True)
 
-        all_labels, all_predictions_list = zip(*results)
+        """all_labels, all_predictions_list = zip(*results)
         if all_labels_combined is None:
             all_labels_combined = all_labels[0]
 
-        all_predictions_combined.extend(all_predictions_list)
+        all_predictions_combined.extend(all_predictions_list)"""
 
     if CALCULATE_RGB:
         params = get_params(is_irg=False)
         results = [get_predictions(model, params) for model in rgb_model_names]
-        write_results(results, is_irg=False)
+        #write_results(results, is_irg=False)
 
-        all_labels, all_predictions_list = zip(*results)
+        """all_labels, all_predictions_list = zip(*results)
         if all_labels_combined is None:
             all_labels_combined = all_labels[0]
 
-        all_predictions_combined.extend(all_predictions_list)
+        all_predictions_combined.extend(all_predictions_list)"""
 
-    final_predictions = majority_vote(all_predictions_combined)
-    confidences = calculate_confidence(all_predictions_combined)
+    if CALCULATE_RGB_NDVI:
+        params = get_params(is_irg=False, is_ndvi=True)
+        results = [get_predictions(model, params) for model in rgb_ndvi_model_names]
+        #write_results(results, is_irg=False)
 
-    accuracy = sum(
-        l == p for l, p in zip(all_labels_combined, final_predictions)
-    ) / len(all_labels_combined)
-    print(f"Combined Accuracy: {accuracy:.2%}")
+        """all_labels, all_predictions_list = zip(*results)
+        if all_labels_combined is None:
+            all_labels_combined = all_labels[0]
+
+        all_predictions_combined.extend(all_predictions_list)"""
+
+    #final_predictions = majority_vote(all_predictions_combined)
+    #confidences = calculate_confidence(all_predictions_combined)
+
+    #accuracy = sum(
+    #    l == p for l, p in zip(all_labels_combined, final_predictions)
+    #) / len(all_labels_combined)
+    #print(f"Combined Accuracy: {accuracy:.2%}")
 
     # write_final_predictions("final_predictions.csv", all_labels_combined, final_predictions, confidences)
     # print("Final predictions written to final_predictions.csv")

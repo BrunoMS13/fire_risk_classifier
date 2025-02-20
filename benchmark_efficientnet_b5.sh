@@ -38,15 +38,13 @@ LOG_FILE=~/models/training_results.log
 echo "Experiment Results - $(date)" > $LOG_FILE
 
 # Model architectures to train
-MODELS=("resnet50")
+MODELS=("efficientnet_b5")
 
 # Number of runs per configuration
 NUM_RUNS=2
 
 # Define datasets
 DATASETS=(
-    "RGB fire_risk_classifier/data/images/ortos2018-RGB-62_5m-decompressed"
-    "IRG fire_risk_classifier/data/images/ortos2018-IRG-62_5m-decompressed"
     "RGB_NDVI fire_risk_classifier/data/images/ortos2018-RGB-62_5m-decompressed --ndvi True"
 )
 
@@ -63,7 +61,7 @@ for model in "${MODELS[@]}"; do
                 echo "Training $model on $DATASET_NAME with lr=$lr (Run $run) $NDVI_FLAG"
 
                 docker run --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train \
-                    --algorithm $model --batch_size 16 --train True --num_epochs 21 --num_classes $NUM_CLASSES \
+                    --algorithm $model --batch_size 8 --train True --num_epochs 21 --num_classes $NUM_CLASSES \
                     --images_dir $IMAGE_DIR --wd $WEIGHT_DECAY --lr $lr --save_as $EXP_NAME $NDVI_FLAG
 
                 echo "Copying Results for $EXP_NAME..."

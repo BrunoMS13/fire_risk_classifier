@@ -38,7 +38,7 @@ class Pipeline:
             self.params.test_cnn = True
         if args.get("algorithm"):
             self.params.algorithm = args.get("algorithm")
-        if args.get("calculate_ndvi_index"):
+        if args.get("ndvi"):
             self.params.calculate_ndvi_index = True
         if args.get("load_weights"):
             self.params.model_weights = args.get("load_weights")
@@ -149,7 +149,6 @@ class Pipeline:
         criterion = self.__get_criterion()
         scheduler = self.__get_scheduler(optimizer)
 
-        best_val_acc = 0
         best_val_loss = 1
         early_stop_counter = 0
 
@@ -158,7 +157,6 @@ class Pipeline:
         epoch_data = self.__get_init_epoch_data()
 
         temp_best_model = None
-        temp_best_acc_model = None
 
         for epoch in range(self.params.cnn_epochs):
             logging.info(
@@ -188,9 +186,6 @@ class Pipeline:
                 temp_best_model = model
             else:
                 early_stop_counter += 1
-            if val_accuracy > best_val_acc:
-                best_val_acc = val_accuracy
-                temp_best_acc_model = model
 
             if early_stop_counter >= self.params.patience:
                 logging.info(
@@ -199,7 +194,6 @@ class Pipeline:
                 break
 
         self.__save_model(temp_best_model, epoch_data)
-        self.__save_model(temp_best_acc_model, {}, "_best_acc")
 
     def __save_model(self, model: nn.Module, epoch_data: dict, extra_info: str = ""):
         # Save model
@@ -349,9 +343,7 @@ class Pipeline:
         final_accuracy = 100 * correct_predictions / total_samples
         f1 = f1_score(all_labels, all_predictions, average="binary" if self.params.num_labels == 2 else "macro")
 
-        logging.info(f"Final Test Loss: {final_loss:.4f}")
-        logging.info(f"Final Test Accuracy: {final_accuracy:.2f}%")
-        logging.info(f"Final Test F1: {f1:.4f}")
+        logging.info(f"Final Test Loss: {final_loss:.4f} | Final Test Accuracy: {final_accuracy:.2f}% | Final Test F1: {f1:.4f}")
 
         if plot_confusion_matrix:
             self.__plot_confusion_matrix(all_labels, all_predictions)

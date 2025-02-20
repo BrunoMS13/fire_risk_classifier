@@ -38,7 +38,7 @@ LOG_FILE=~/models/training_results.log
 echo "Experiment Results - $(date)" > $LOG_FILE
 
 # Model architectures to train
-MODELS=("resnet50")
+MODELS=("densenet161")
 
 # Number of runs per configuration
 NUM_RUNS=2
