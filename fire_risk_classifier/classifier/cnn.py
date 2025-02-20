@@ -153,19 +153,20 @@ def __adapt_model_to_ndvi(base_model: nn.Module):
     Modify the first convolutional layer of the CNN to accept 4 input channels instead of 3 (RGB + NDVI).
     """
     first_layer = None
+
     # Identify the first layer based on model type
     if isinstance(base_model, models.ResNet):
         first_layer = base_model.conv1
     elif isinstance(base_model, models.DenseNet):
         first_layer = base_model.features.conv0
     elif isinstance(base_model, models.EfficientNet):
-        first_layer = base_model.features[0]
+        first_layer = base_model.features[0][0]  # EfficientNet's Conv2d is inside Conv2dNormActivation
 
     if first_layer is None:
         raise ValueError("Unsupported model type for NDVI adaptation.")
 
     # Check if bias is used
-    bias = first_layer.bias is not None
+    bias = first_layer.bias is not None if hasattr(first_layer, "bias") else False
 
     # Create a new conv layer with 4 input channels
     new_conv = nn.Conv2d(
@@ -184,9 +185,7 @@ def __adapt_model_to_ndvi(base_model: nn.Module):
         new_conv.weight[:, 2, :, :].copy_(first_layer.weight[:, 2, :, :])  # B → B
 
         # NDVI: Initialize based on Red (or use a different strategy if needed)
-        new_conv.weight[:, 3, :, :].copy_(
-            first_layer.weight[:, 0, :, :]
-        )  # Copy Red weights for NDVI
+        new_conv.weight[:, 3, :, :].copy_(first_layer.weight[:, 0, :, :])  # Copy Red weights for NDVI
 
     # Copy bias if applicable
     if bias:
@@ -198,7 +197,7 @@ def __adapt_model_to_ndvi(base_model: nn.Module):
     elif isinstance(base_model, models.DenseNet):
         base_model.features.conv0 = new_conv
     elif isinstance(base_model, models.EfficientNet):
-        base_model.features[0] = new_conv
+        base_model.features[0][0] = new_conv  # EfficientNet's conv layer is inside a wrapper
 
     return base_model
 
