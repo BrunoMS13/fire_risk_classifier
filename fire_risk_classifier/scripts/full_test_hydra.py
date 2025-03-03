@@ -12,7 +12,14 @@ from fire_risk_classifier.dataclasses.params import Params
 irg_model_names = [] 
 rgb_model_names = []
 rgb_ndvi_model_names = [
-    "test.pth"
+    "resnet50_RGB_NDVI_lr1e-4_run1.pth",
+    "resnet50_RGB_NDVI_lr1e-4_run2.pth",
+    "resnet50_RGB_NDVI_lr1e-5_run2.pth",
+    "resnet50_RGB_NDVI_lr1e-5_run1.pth",
+    "resnet50_RGB_NDVI_lr5e-5_run1.pth",
+    "resnet50_RGB_NDVI_lr5e-5_run2.pth",
+    "resnet50_RGB_NDVI_lr5e-6_run1.pth",
+    "resnet50_RGB_NDVI_lr5e-6_run2.pth",
 ]
 
 NUM_CLASSES = 2
@@ -57,7 +64,6 @@ def get_predictions(model: str, params: Params) -> list:
         algo = "densenet161"
     args = {
         "test": True,
-        "train": True,
         "algorithm": algo,
         "load_weights": model,
     }

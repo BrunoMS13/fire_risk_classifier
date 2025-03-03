@@ -82,22 +82,47 @@ def plot_learning_rates(models_dict):
 
 
 
-# **Define the learning rate models to compare (all on one plot)**
-model = "efficientnet_b5"
-learning_rate_models = {
-    "1e-4": load_json_data(f"models/models_old/{model}_irg_wd5e-4_lr1e-4_patience8_metrics.json"),
-    "5e-5": load_json_data(f"models/models_old/{model}_irg_wd5e-4_lr5e-5_patience8_metrics.json"),
-    "1e-5": load_json_data(f"models/models_old/{model}_irg_wd5e-4_lr1e-5_patience8_metrics.json"),
-    "5e-6": load_json_data(f"models/models_old/{model}_irg_wd5e-4_lr5e-6_patience8_metrics.json"),
-    "1e-6": load_json_data(f"models/models_old/{model}_irg_wd5e-4_lr1e-6_patience8_metrics.json"),
-}
 
-# Remove any None values in case a file wasn't found
-learning_rate_models = {lr: data for lr, data in learning_rate_models.items() if data}
+def average_runs(data1, data2):
+    """Compute the average between two runs for each key (handling missing data)."""
+    averaged_data = {}
+
+    for key in ["train_loss", "val_loss", "train_accuracy", "val_accuracy"]:
+        list1 = data1.get(key, []) if data1 else []
+        list2 = data2.get(key, []) if data2 else []
+
+        # Find the max available length
+        max_len = max(len(list1), len(list2))
+
+        # Pad with NaNs to handle uneven lengths
+        arr1 = np.array(list1 + [np.nan] * (max_len - len(list1)))
+        arr2 = np.array(list2 + [np.nan] * (max_len - len(list2)))
+
+        # Compute mean while ignoring NaNs
+        averaged_data[key] = np.nanmean(np.vstack((arr1, arr2)), axis=0).tolist()
+
+    return averaged_data
+
+# Define the model
+model = "efficientnet_b5"
+learning_rate_models = {}
+
+# Iterate over learning rates and load both runs
+learning_rates = ["1e-4", "5e-5", "1e-5", "5e-6"]
+for lr in learning_rates:
+    run1 = None
+    run2 = None
+    #if lr not in ["1e-5", "5e-6"]:
+    run1 = load_json_data(f"models/{model}/{model}_RGB_lr{lr}_run1_metrics.json")
+    #if lr not in ["1e-4"]:
+    run2 = load_json_data(f"models/{model}/{model}_RGB_lr{lr}_run2_metrics.json")
+
+    # If both runs exist, average them; otherwise, take the existing one
+    if run1 or run2:
+        learning_rate_models[lr] = average_runs(run1, run2)
 
 # Call the function to plot
 def main():
-    #print(learning_rate_models)
     for learning_rate, data in learning_rate_models.items():
         if data:  # Ensure data is not empty
             # Find the index of the lowest validation loss
@@ -114,6 +139,7 @@ def main():
                 f"Train Acc (At Min Val Loss Epoch): {corresponding_train_acc}, "
                 f"Lowest Val Loss: {lowest_val_loss}, "
                 f"Train Loss (At Min Val Loss Epoch): {corresponding_train_loss}")
+
     if learning_rate_models:
         plot_learning_rates(learning_rate_models)
     else:

@@ -29,9 +29,14 @@ IMAGE_BASE_DIR="fire_risk_classifier/data/images"
 NUM_CLASSES=2
 mkdir -p ~/models
 
-# Define hyperparameters to test
-LEARNING_RATES=("1e-4" "5e-5" "1e-5" "5e-6")  # Extended LR options
-WEIGHT_DECAY="0"  # Fixed weight decay for all runs
+# Define fixed best learning rate (based on previous experiments)
+LEARNING_RATE="5e-6"  # Change if a different LR was best
+
+# Define weight decay values to test
+WEIGHT_DECAYS=("0" "1e-4" "1e-2")
+
+# Define unfreezing strategies
+UNFREEZE_OPTIONS=("None" "Gradual")
 
 # Logging file
 LOG_FILE=~/models/training_results.log
@@ -45,35 +50,38 @@ NUM_RUNS=2
 
 # Define datasets
 DATASETS=(
+    "RGB fire_risk_classifier/data/images/ortos2018-RGB-62_5m-decompressed"
+    "IRG fire_risk_classifier/data/images/ortos2018-IRG-62_5m-decompressed"
     "RGB_NDVI fire_risk_classifier/data/images/ortos2018-RGB-62_5m-decompressed --ndvi True"
 )
 
-# Loop through models, learning rates, datasets
+# Loop through models, datasets, weight decay values, and unfreezing strategies
 for model in "${MODELS[@]}"; do
-    for lr in "${LEARNING_RATES[@]}"; do
-        for dataset in "${DATASETS[@]}"; do
-            DATASET_NAME=$(echo "$dataset" | awk '{print $1}')
-            IMAGE_DIR=$(echo "$dataset" | awk '{print $2}')
-            NDVI_FLAG=$(echo "$dataset" | awk '{print $3 " " $4}')
+    for dataset in "${DATASETS[@]}"; do
+        DATASET_NAME=$(echo "$dataset" | awk '{print $1}')
+        IMAGE_DIR=$(echo "$dataset" | awk '{print $2}')
+        NDVI_FLAG=$(echo "$dataset" | awk '{print $3 " " $4}')
 
-            for run in $(seq 1 $NUM_RUNS); do
-                EXP_NAME="${model}_${DATASET_NAME}_lr${lr}_run${run}"
-                echo "Training $model on $DATASET_NAME with lr=$lr (Run $run) $NDVI_FLAG"
+        for wd in "${WEIGHT_DECAYS[@]}"; do
+            for unfreeze in "${UNFREEZE_OPTIONS[@]}"; do
+                for run in $(seq 1 $NUM_RUNS); do
+                    EXP_NAME="${model}_${DATASET_NAME}_lr${LEARNING_RATE}_wd${wd}_unfreeze${unfreeze}_run${run}"
+                    echo "Training $model on $DATASET_NAME with lr=$LEARNING_RATE, wd=$wd, unfreeze=$unfreeze (Run $run) $NDVI_FLAG"
 
-                docker run --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train \
-                    --algorithm $model --batch_size 8 --train True --num_epochs 21 --num_classes $NUM_CLASSES \
-                    --images_dir $IMAGE_DIR --wd $WEIGHT_DECAY --lr $lr --save_as $EXP_NAME $NDVI_FLAG
+                    docker run --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train \
+                        --algorithm $model --batch_size 16 --train True --num_epochs 21 --num_classes $NUM_CLASSES \
+                        --images_dir $IMAGE_DIR --wd $wd --lr $LEARNING_RATE --unfreeze $unfreeze --save_as $EXP_NAME $NDVI_FLAG
 
-                echo "Copying Results for $EXP_NAME..."
-                cp -r $WEIGHTS_PATH/$EXP_NAME.pth ~/models
-                cp -r $WEIGHTS_PATH/${EXP_NAME}_best_acc.pth ~/models
-                cp -r $WEIGHTS_PATH/${EXP_NAME}_metrics.json ~/models
+                    echo "Copying Results for $EXP_NAME..."
+                    cp -r $WEIGHTS_PATH/$EXP_NAME.pth ~/models
+                    cp -r $WEIGHTS_PATH/${EXP_NAME}_metrics.json ~/models
 
-                # Log experiment results
-                echo "$EXP_NAME" >> $LOG_FILE
-                echo "Model: $model, Dataset: $DATASET_NAME, Learning Rate: $lr, Weight Decay: $WEIGHT_DECAY, Run: $run" >> $LOG_FILE
-                echo "------------------------------------" >> $LOG_FILE
+                    # Log experiment results
+                    echo "$EXP_NAME" >> $LOG_FILE
+                    echo "Model: $model, Dataset: $DATASET_NAME, Learning Rate: $LEARNING_RATE, Weight Decay: $wd, Unfreezing: $unfreeze, Run: $run" >> $LOG_FILE
+                    echo "------------------------------------" >> $LOG_FILE
 
+                done
             done
         done
     done
