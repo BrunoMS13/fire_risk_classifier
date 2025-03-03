@@ -33,7 +33,7 @@ mkdir -p ~/models
 LEARNING_RATE="5e-6"  # Change if a different LR was best
 
 # Define weight decay values to test
-WEIGHT_DECAYS=("1e-4" "1e-2")
+WEIGHT_DECAYS=("1e-6" "1e-4" "1e-2")
 
 # Define unfreezing strategies
 UNFREEZE_OPTIONS=("None")
