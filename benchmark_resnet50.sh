@@ -33,10 +33,10 @@ mkdir -p ~/models
 LEARNING_RATE="5e-6"  # Change if a different LR was best
 
 # Define weight decay values to test
-WEIGHT_DECAYS=("0" "1e-4" "1e-2")
+WEIGHT_DECAYS=("1e-4" "1e-2")
 
 # Define unfreezing strategies
-UNFREEZE_OPTIONS=("None" "Gradual")
+UNFREEZE_OPTIONS=("None")
 
 # Logging file
 LOG_FILE=~/models/training_results.log
@@ -70,7 +70,7 @@ for model in "${MODELS[@]}"; do
 
                     docker run --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train \
                         --algorithm $model --batch_size 16 --train True --num_epochs 21 --num_classes $NUM_CLASSES \
-                        --images_dir $IMAGE_DIR --wd $wd --lr $LEARNING_RATE --unfreeze $unfreeze --save_as $EXP_NAME $NDVI_FLAG
+                        --images_dir $IMAGE_DIR --wd "$wd" --lr $LEARNING_RATE --unfreeze $unfreeze --save_as $EXP_NAME $NDVI_FLAG
 
                     echo "Copying Results for $EXP_NAME..."
                     cp -r $WEIGHTS_PATH/$EXP_NAME.pth ~/models
