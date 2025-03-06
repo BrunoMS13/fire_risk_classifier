@@ -104,12 +104,14 @@ def average_runs(data1, data2):
     return averaged_data
 
 # Define the model
-model = "efficientnet_b5"
-learning_rate_models = {}
+#model = "resnet50"
+#learning_rate_models = {}
+#weight_decay_models = {}
 
 # Iterate over learning rates and load both runs
 learning_rates = ["1e-4", "5e-5", "1e-5", "5e-6"]
-for lr in learning_rates:
+weight_decays = ["1e-6", "1e-4", "1e-2"]
+"""for lr in learning_rates:
     run1 = None
     run2 = None
     #if lr not in ["1e-5", "5e-6"]:
@@ -121,9 +123,19 @@ for lr in learning_rates:
     if run1 or run2:
         learning_rate_models[lr] = average_runs(run1, run2)
 
+for wd in weight_decays:
+    run1 = None
+    run2 = None
+    run1 = load_json_data(f"models/{model}/{model}_RGB_lr5e-6_wd{wd}_unfreezeNone_run1_metrics.json")
+    #run2 = load_json_data(f"models/{model}/{model}_IRG_lr5e-6_wd{wd}_unfreezeNone_run2_metrics.json")
+
+    # If both runs exist, average them; otherwise, take the existing one
+    if run1 or run2:
+        weight_decay_models[wd] = average_runs(run1, run2)"""
+
 # Call the function to plot
 def main():
-    for learning_rate, data in learning_rate_models.items():
+    """for learning_rate, data in weight_decay_models.items():
         if data:  # Ensure data is not empty
             # Find the index of the lowest validation loss
             lowest_val_loss_idx = data["val_loss"].index(min(data["val_loss"]))
@@ -138,9 +150,77 @@ def main():
                 f"Val Acc (At Min Val Loss Epoch): {corresponding_val_acc}, "
                 f"Train Acc (At Min Val Loss Epoch): {corresponding_train_acc}, "
                 f"Lowest Val Loss: {lowest_val_loss}, "
-                f"Train Loss (At Min Val Loss Epoch): {corresponding_train_loss}")
+                f"Train Loss (At Min Val Loss Epoch): {corresponding_train_loss}")"""
 
+    write_to_excel()
+    return
     if learning_rate_models:
         plot_learning_rates(learning_rate_models)
     else:
         print("Could not load any JSON data. Please check file paths.")
+
+def write_to_excel():
+    import pandas as pd
+
+
+    file_path = "training_results.xlsx"
+
+    results = []  # List to store results
+
+    # Process weight decays
+    for model in ["resnet50", "densenet161", "efficientnet_b5"]:
+        for IMG_TYPE in ["RGB", "IRG", "RGB_NDVI"]:
+            for wd in weight_decays:
+                run1 = load_json_data(f"models/{model}/{model}_{IMG_TYPE}_lr5e-6_wd{wd}_unfreezeNone_run1_metrics.json")
+                run2 = load_json_data(f"models/{model}/{model}_{IMG_TYPE}_lr5e-6_wd{wd}_unfreezeNone_run2_metrics.json")
+
+                # If run1 exists, store it
+                if run1:
+                    lowest_val_loss_idx = run1["val_loss"].index(min(run1["val_loss"]))
+                    results.append({
+                        "Model": model,
+                        "IMG": IMG_TYPE,
+                        "LR": "5e-6",
+                        "WD": wd,
+                        "Run": "Run 1",
+                        "Freeze": False,
+                        "Val.Acc.": run1["val_accuracy"][lowest_val_loss_idx],
+                        "Train.Acc.": run1["train_accuracy"][lowest_val_loss_idx],
+                        "Val.Loss": run1["val_loss"][lowest_val_loss_idx],
+                        "Train.Loss": run1["train_loss"][lowest_val_loss_idx],
+                        "Test.Acc": None,
+                        "Test.F1": None
+                    })
+
+                # If run2 exists, store it
+                if run2:
+                    lowest_val_loss_idx = run2["val_loss"].index(min(run2["val_loss"]))
+                    results.append({
+                        "Model": model,
+                        "IMG": IMG_TYPE,
+                        "LR": "5e-6",
+                        "WD": wd,
+                        "Run": "Run 2",
+                        "Freeze": False,
+                        "Val.Acc.": run2["val_accuracy"][lowest_val_loss_idx],
+                        "Train.Acc.": run2["train_accuracy"][lowest_val_loss_idx],
+                        "Val.Loss": run2["val_loss"][lowest_val_loss_idx],
+                        "Train.Loss": run2["train_loss"][lowest_val_loss_idx],
+                        "Test.Acc": None,
+                        "Test.F1": None
+                    })
+
+    # Convert to DataFrame
+    df_new = pd.DataFrame(results)
+
+    # Save to Excel
+    if os.path.exists(file_path):
+        existing_df = pd.read_excel(file_path)
+        df_combined = pd.concat([existing_df, df_new], ignore_index=True)
+    else:
+        df_combined = df_new  # No existing file, just use new data
+
+    # Save back to Excel (preserving old data)
+    df_combined.to_excel(file_path, index=False)
+
+    print("Results saved to training_results2.xlsx")

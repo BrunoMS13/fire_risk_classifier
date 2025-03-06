@@ -29,14 +29,14 @@ IMAGE_BASE_DIR="fire_risk_classifier/data/images"
 NUM_CLASSES=2
 mkdir -p ~/models
 
-# Define fixed best learning rate (based on previous experiments)
-LEARNING_RATE="5e-6"  # Change if a different LR was best
+# Define learning rates to test
+LEARNING_RATES=("1e-4" "1e-5")  # Keeping only two learning rates
 
 # Define weight decay values to test
-WEIGHT_DECAYS=("1e-6" "1e-4" "1e-2")
+WEIGHT_DECAYS=("1e-4" "1e-2")  # Removed 1e-6
 
-# Define unfreezing strategies
-UNFREEZE_OPTIONS=("None")
+# Define unfreezing strategies (kept only "Gradual")
+UNFREEZE_OPTIONS=("Gradual")
 
 # Logging file
 LOG_FILE=~/models/training_results.log
@@ -55,32 +55,39 @@ DATASETS=(
     "RGB_NDVI fire_risk_classifier/data/images/ortos2018-RGB-62_5m-decompressed --ndvi True"
 )
 
-# Loop through models, datasets, weight decay values, and unfreezing strategies
+# Calculate total models to be trained
+TOTAL_MODELS=$(( ${#MODELS[@]} * ${#DATASETS[@]} * ${#LEARNING_RATES[@]} * ${#WEIGHT_DECAYS[@]} * ${#UNFREEZE_OPTIONS[@]} * NUM_RUNS ))
+
+echo "Total number of training experiments: $TOTAL_MODELS"
+
+# Loop through models, datasets, learning rates, weight decay values, and unfreezing strategies
 for model in "${MODELS[@]}"; do
     for dataset in "${DATASETS[@]}"; do
         DATASET_NAME=$(echo "$dataset" | awk '{print $1}')
         IMAGE_DIR=$(echo "$dataset" | awk '{print $2}')
         NDVI_FLAG=$(echo "$dataset" | awk '{print $3 " " $4}')
 
-        for wd in "${WEIGHT_DECAYS[@]}"; do
-            for unfreeze in "${UNFREEZE_OPTIONS[@]}"; do
-                for run in $(seq 1 $NUM_RUNS); do
-                    EXP_NAME="${model}_${DATASET_NAME}_lr${LEARNING_RATE}_wd${wd}_unfreeze${unfreeze}_run${run}"
-                    echo "Training $model on $DATASET_NAME with lr=$LEARNING_RATE, wd=$wd, unfreeze=$unfreeze (Run $run) $NDVI_FLAG"
+        for lr in "${LEARNING_RATES[@]}"; do
+            for wd in "${WEIGHT_DECAYS[@]}"; do
+                for unfreeze in "${UNFREEZE_OPTIONS[@]}"; do
+                    for run in $(seq 1 $NUM_RUNS); do
+                        EXP_NAME="${model}_${DATASET_NAME}_lr${lr}_wd${wd}_unfreeze${unfreeze}_run${run}"
+                        echo "Training $model on $DATASET_NAME with lr=$lr, wd=$wd, unfreeze=$unfreeze (Run $run) $NDVI_FLAG"
 
-                    docker run --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train \
-                        --algorithm $model --batch_size 8 --train True --num_epochs 21 --num_classes $NUM_CLASSES \
-                        --images_dir $IMAGE_DIR --wd $wd --lr $LEARNING_RATE --unfreeze $unfreeze --save_as $EXP_NAME $NDVI_FLAG
+                        docker run --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train \
+                            --algorithm $model --batch_size 8 --train True --num_epochs 21 --num_classes $NUM_CLASSES \
+                            --images_dir $IMAGE_DIR --wd $wd --lr $lr --unfreeze $unfreeze --save_as $EXP_NAME $NDVI_FLAG
 
-                    echo "Copying Results for $EXP_NAME..."
-                    cp -r $WEIGHTS_PATH/$EXP_NAME.pth ~/models
-                    cp -r $WEIGHTS_PATH/${EXP_NAME}_metrics.json ~/models
+                        echo "Copying Results for $EXP_NAME..."
+                        cp -r $WEIGHTS_PATH/$EXP_NAME.pth ~/models
+                        cp -r $WEIGHTS_PATH/${EXP_NAME}_metrics.json ~/models
 
-                    # Log experiment results
-                    echo "$EXP_NAME" >> $LOG_FILE
-                    echo "Model: $model, Dataset: $DATASET_NAME, Learning Rate: $LEARNING_RATE, Weight Decay: $wd, Unfreezing: $unfreeze, Run: $run" >> $LOG_FILE
-                    echo "------------------------------------" >> $LOG_FILE
+                        # Log experiment results
+                        echo "$EXP_NAME" >> $LOG_FILE
+                        echo "Model: $model, Dataset: $DATASET_NAME, Learning Rate: $lr, Weight Decay: $wd, Unfreezing: $unfreeze, Run: $run" >> $LOG_FILE
+                        echo "------------------------------------" >> $LOG_FILE
 
+                    done
                 done
             done
         done

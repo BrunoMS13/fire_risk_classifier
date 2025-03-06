@@ -9,18 +9,24 @@ from fire_risk_classifier.pipeline import Pipeline
 from fire_risk_classifier.utils.logger import Logger
 from fire_risk_classifier.dataclasses.params import Params
 
-irg_model_names = [] 
+irg_model_names = ["densenet161/d161_wd5e4_lr5e4.pth"] 
 rgb_model_names = []
-rgb_ndvi_model_names = [
-    "resnet50_RGB_NDVI_lr1e-4_run1.pth",
-    "resnet50_RGB_NDVI_lr1e-4_run2.pth",
-    "resnet50_RGB_NDVI_lr1e-5_run2.pth",
-    "resnet50_RGB_NDVI_lr1e-5_run1.pth",
-    "resnet50_RGB_NDVI_lr5e-5_run1.pth",
-    "resnet50_RGB_NDVI_lr5e-5_run2.pth",
-    "resnet50_RGB_NDVI_lr5e-6_run1.pth",
-    "resnet50_RGB_NDVI_lr5e-6_run2.pth",
-]
+rgb_ndvi_model_names = []
+
+"""weight_decays = ["1e-6", "1e-4", "1e-2"]
+for model in ["resnet50", "densenet161", "efficientnet_b5"]:
+    for IMG_TYPE in ["RGB", "IRG", "RGB_NDVI"]:
+        for wd in weight_decays:
+            for run in ["run1", "run2"]:
+                name = f"{model}/{model}_{IMG_TYPE}_lr5e-6_wd{wd}_unfreezeNone_{run}.pth"
+                if IMG_TYPE == "IRG":
+                    irg_model_names.append(name)
+                elif IMG_TYPE == "RGB":
+                    rgb_model_names.append(name)
+                else:
+                    rgb_ndvi_model_names.append(name)
+                print(name)
+"""
 
 NUM_CLASSES = 2
 CALCULATE_IRG = True
@@ -86,7 +92,7 @@ def get_params(is_irg: bool, is_ndvi: bool = False) -> Params:
 def write_results(results: list, is_irg: bool):
     models = irg_model_names if is_irg else rgb_model_names
     for i, (labels, predictions) in enumerate(results):
-        with open(f"results_{models[i]}_{'IRG' if is_irg else 'RGB'}.txt", "w") as f:
+        with open(f"results__{'IRG' if is_irg else 'RGB'}.txt", "w") as f:
             f.write("label,prediction\n")
             for label, prediction in zip(labels, predictions):
                 f.write(f"{label},{prediction}\n")
@@ -101,7 +107,7 @@ def main():
         # Run all pipelines and collect results
         params = get_params(is_irg=True)
         results = [get_predictions(model, params) for model in irg_model_names]
-        #write_results(results, is_irg=True)
+        write_results(results, is_irg=True)
 
         """all_labels, all_predictions_list = zip(*results)
         if all_labels_combined is None:
