@@ -38,15 +38,16 @@ WEIGHT_DECAYS=("1e-4" "1e-2")  # Removed 1e-6
 # Define unfreezing strategies (kept only "Gradual")
 UNFREEZE_OPTIONS=("Gradual")
 
-# Logging file
-LOG_FILE=~/models/training_results.log
+# Logging file (add INSTANCE_ID to log for different shells)
+INSTANCE_ID=${INSTANCE_ID:-"instance_2"}  # Default to "instance_1" if not set
+LOG_FILE=~/models/training_results_${INSTANCE_ID}.log
 echo "Experiment Results - $(date)" > $LOG_FILE
 
 # Model architectures to train
-MODELS=("densenet161")
+MODELS=("efficientnet_b5")
 
 # Number of runs per configuration
-NUM_RUNS=2
+NUM_RUNS=1
 
 # Define datasets
 DATASETS=(
@@ -55,10 +56,6 @@ DATASETS=(
     "RGB_NDVI fire_risk_classifier/data/images/ortos2018-RGB-62_5m-decompressed --ndvi True"
 )
 
-# Calculate total models to be trained
-TOTAL_MODELS=$(( ${#MODELS[@]} * ${#DATASETS[@]} * ${#LEARNING_RATES[@]} * ${#WEIGHT_DECAYS[@]} * ${#UNFREEZE_OPTIONS[@]} * NUM_RUNS ))
-
-echo "Total number of training experiments: $TOTAL_MODELS"
 
 # Loop through models, datasets, learning rates, weight decay values, and unfreezing strategies
 for model in "${MODELS[@]}"; do
@@ -71,7 +68,7 @@ for model in "${MODELS[@]}"; do
             for wd in "${WEIGHT_DECAYS[@]}"; do
                 for unfreeze in "${UNFREEZE_OPTIONS[@]}"; do
                     for run in $(seq 1 $NUM_RUNS); do
-                        EXP_NAME="${model}_${DATASET_NAME}_lr${lr}_wd${wd}_unfreeze${unfreeze}_run${run}"
+                        EXP_NAME="${model}_${DATASET_NAME}_lr${lr}_wd${wd}_unfreeze${unfreeze}_run${run}_${INSTANCE_ID}"
                         echo "Training $model on $DATASET_NAME with lr=$lr, wd=$wd, unfreeze=$unfreeze (Run $run) $NDVI_FLAG"
 
                         docker run --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train \

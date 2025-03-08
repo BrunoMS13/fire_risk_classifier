@@ -9,9 +9,15 @@ from fire_risk_classifier.pipeline import Pipeline
 from fire_risk_classifier.utils.logger import Logger
 from fire_risk_classifier.dataclasses.params import Params
 
-irg_model_names = ["densenet161/d161_wd5e4_lr5e4.pth"] 
-rgb_model_names = []
-rgb_ndvi_model_names = []
+irg_model_names = [
+] 
+rgb_model_names = [
+    "models/densenet161_RGB_lr1e-4_wd1e-4_unfreezeGradual_run1_instance_2.pth",
+]
+rgb_ndvi_model_names = [
+]
+
+
 
 """weight_decays = ["1e-6", "1e-4", "1e-2"]
 for model in ["resnet50", "densenet161", "efficientnet_b5"]:
@@ -107,7 +113,7 @@ def main():
         # Run all pipelines and collect results
         params = get_params(is_irg=True)
         results = [get_predictions(model, params) for model in irg_model_names]
-        write_results(results, is_irg=True)
+        #write_results(results, is_irg=True)
 
         """all_labels, all_predictions_list = zip(*results)
         if all_labels_combined is None:

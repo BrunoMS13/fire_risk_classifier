@@ -109,8 +109,8 @@ def average_runs(data1, data2):
 #weight_decay_models = {}
 
 # Iterate over learning rates and load both runs
-learning_rates = ["1e-4", "5e-5", "1e-5", "5e-6"]
-weight_decays = ["1e-6", "1e-4", "1e-2"]
+learning_rates = ["1e-4", "1e-5"]
+weight_decays =  ["1e-4", "1e-2"]
 """for lr in learning_rates:
     run1 = None
     run2 = None
@@ -163,52 +163,53 @@ def write_to_excel():
     import pandas as pd
 
 
-    file_path = "training_results.xlsx"
+    file_path = "training_results_freeze.xlsx"
 
     results = []  # List to store results
 
     # Process weight decays
-    for model in ["resnet50", "densenet161", "efficientnet_b5"]:
+    for model in ["densenet161"]:
         for IMG_TYPE in ["RGB", "IRG", "RGB_NDVI"]:
-            for wd in weight_decays:
-                run1 = load_json_data(f"models/{model}/{model}_{IMG_TYPE}_lr5e-6_wd{wd}_unfreezeNone_run1_metrics.json")
-                run2 = load_json_data(f"models/{model}/{model}_{IMG_TYPE}_lr5e-6_wd{wd}_unfreezeNone_run2_metrics.json")
+            for lr in learning_rates:
+                for wd in weight_decays:
+                    run1 = load_json_data(f"models/{model}_{IMG_TYPE}_lr{lr}_wd{wd}_unfreezeGradual_run1_instance_1_metrics.json")
+                    run2 = load_json_data(f"models/{model}_{IMG_TYPE}_lr{lr}_wd{wd}_unfreezeGradual_run1_instance_2_metrics.json")
 
-                # If run1 exists, store it
-                if run1:
-                    lowest_val_loss_idx = run1["val_loss"].index(min(run1["val_loss"]))
-                    results.append({
-                        "Model": model,
-                        "IMG": IMG_TYPE,
-                        "LR": "5e-6",
-                        "WD": wd,
-                        "Run": "Run 1",
-                        "Freeze": False,
-                        "Val.Acc.": run1["val_accuracy"][lowest_val_loss_idx],
-                        "Train.Acc.": run1["train_accuracy"][lowest_val_loss_idx],
-                        "Val.Loss": run1["val_loss"][lowest_val_loss_idx],
-                        "Train.Loss": run1["train_loss"][lowest_val_loss_idx],
-                        "Test.Acc": None,
-                        "Test.F1": None
-                    })
+                    # If run1 exists, store it
+                    if run1:
+                        lowest_val_loss_idx = run1["val_loss"].index(min(run1["val_loss"]))
+                        results.append({
+                            "Model": model,
+                            "IMG": IMG_TYPE,
+                            "LR": lr,
+                            "WD": wd,
+                            "Run": "Run 1",
+                            "Freeze": True,
+                            "Val.Acc.": run1["val_accuracy"][lowest_val_loss_idx],
+                            "Train.Acc.": run1["train_accuracy"][lowest_val_loss_idx],
+                            "Val.Loss": run1["val_loss"][lowest_val_loss_idx],
+                            "Train.Loss": run1["train_loss"][lowest_val_loss_idx],
+                            "Test.Acc": None,
+                            "Test.F1": None
+                        })
 
-                # If run2 exists, store it
-                if run2:
-                    lowest_val_loss_idx = run2["val_loss"].index(min(run2["val_loss"]))
-                    results.append({
-                        "Model": model,
-                        "IMG": IMG_TYPE,
-                        "LR": "5e-6",
-                        "WD": wd,
-                        "Run": "Run 2",
-                        "Freeze": False,
-                        "Val.Acc.": run2["val_accuracy"][lowest_val_loss_idx],
-                        "Train.Acc.": run2["train_accuracy"][lowest_val_loss_idx],
-                        "Val.Loss": run2["val_loss"][lowest_val_loss_idx],
-                        "Train.Loss": run2["train_loss"][lowest_val_loss_idx],
-                        "Test.Acc": None,
-                        "Test.F1": None
-                    })
+                    # If run2 exists, store it
+                    if run2:
+                        lowest_val_loss_idx = run2["val_loss"].index(min(run2["val_loss"]))
+                        results.append({
+                            "Model": model,
+                            "IMG": IMG_TYPE,
+                            "LR": lr,
+                            "WD": wd,
+                            "Run": "Run 2",
+                            "Freeze": True,
+                            "Val.Acc.": run2["val_accuracy"][lowest_val_loss_idx],
+                            "Train.Acc.": run2["train_accuracy"][lowest_val_loss_idx],
+                            "Val.Loss": run2["val_loss"][lowest_val_loss_idx],
+                            "Train.Loss": run2["train_loss"][lowest_val_loss_idx],
+                            "Test.Acc": None,
+                            "Test.F1": None
+                        })
 
     # Convert to DataFrame
     df_new = pd.DataFrame(results)
@@ -223,4 +224,4 @@ def write_to_excel():
     # Save back to Excel (preserving old data)
     df_combined.to_excel(file_path, index=False)
 
-    print("Results saved to training_results2.xlsx")
+    print("Results saved to training_results_freeze.xlsx")
