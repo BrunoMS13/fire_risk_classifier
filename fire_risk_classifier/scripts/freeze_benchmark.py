@@ -104,34 +104,34 @@ def average_runs(data1, data2):
     return averaged_data
 
 # Define the model
-#model = "resnet50"
-#learning_rate_models = {}
+model = "resnet50"
+learning_rate_models = {}
 #weight_decay_models = {}
 
 # Iterate over learning rates and load both runs
-learning_rates = ["1e-4", "1e-5"]
-weight_decays =  ["1e-4", "1e-2"]
-"""for lr in learning_rates:
+learning_rates = ["1e-4", "5e-5", "1e-5", "5e-6"]
+#weight_decays =  ["1e-4", "1e-2"]
+for lr in learning_rates:
     run1 = None
     run2 = None
     #if lr not in ["1e-5", "5e-6"]:
     run1 = load_json_data(f"models/{model}/{model}_RGB_lr{lr}_run1_metrics.json")
     #if lr not in ["1e-4"]:
-    run2 = load_json_data(f"models/{model}/{model}_RGB_lr{lr}_run2_metrics.json")
+    #run2 = load_json_data(f"models/{model}/{model}_RGB_lr{lr}_run2_metrics.json")
 
     # If both runs exist, average them; otherwise, take the existing one
     if run1 or run2:
         learning_rate_models[lr] = average_runs(run1, run2)
 
-for wd in weight_decays:
+"""for wd in weight_decays:
     run1 = None
     run2 = None
     run1 = load_json_data(f"models/{model}/{model}_RGB_lr5e-6_wd{wd}_unfreezeNone_run1_metrics.json")
-    #run2 = load_json_data(f"models/{model}/{model}_IRG_lr5e-6_wd{wd}_unfreezeNone_run2_metrics.json")
+    run2 = load_json_data(f"models/{model}/{model}_IRG_lr5e-6_wd{wd}_unfreezeNone_run2_metrics.json")
 
     # If both runs exist, average them; otherwise, take the existing one
     if run1 or run2:
-        weight_decay_models[wd] = average_runs(run1, run2)"""
+        learning_rate_models[wd] = average_runs(run1, run2)"""
 
 # Call the function to plot
 def main():
@@ -152,23 +152,23 @@ def main():
                 f"Lowest Val Loss: {lowest_val_loss}, "
                 f"Train Loss (At Min Val Loss Epoch): {corresponding_train_loss}")"""
 
-    write_to_excel()
-    return
+    #write_to_excel()
     if learning_rate_models:
         plot_learning_rates(learning_rate_models)
     else:
         print("Could not load any JSON data. Please check file paths.")
+    return
 
 def write_to_excel():
     import pandas as pd
 
 
-    file_path = "training_results_freeze.xlsx"
+    file_path = "training_results_freeze_eb5.xlsx"
 
     results = []  # List to store results
 
     # Process weight decays
-    for model in ["densenet161"]:
+    for model in ["efficientnet_b5"]:
         for IMG_TYPE in ["RGB", "IRG", "RGB_NDVI"]:
             for lr in learning_rates:
                 for wd in weight_decays:

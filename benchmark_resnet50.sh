@@ -30,7 +30,7 @@ NUM_CLASSES=2
 mkdir -p ~/models
 
 # Define fixed best learning rate (based on previous experiments)
-LEARNING_RATE="5e-6"  # Change if a different LR was best
+LEARNING_RATE="1e-5"  # Change if a different LR was best
 
 # Define weight decay values to test
 WEIGHT_DECAYS=("1e-6" "1e-4" "1e-2")
@@ -50,7 +50,6 @@ NUM_RUNS=2
 
 # Define datasets
 DATASETS=(
-    "RGB fire_risk_classifier/data/images/ortos2018-RGB-62_5m-decompressed"
     "IRG fire_risk_classifier/data/images/ortos2018-IRG-62_5m-decompressed"
     "RGB_NDVI fire_risk_classifier/data/images/ortos2018-RGB-62_5m-decompressed --ndvi True"
 )

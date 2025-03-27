@@ -289,7 +289,7 @@ class Pipeline:
 
     def test_cnn(
         self, plot_confusion_matrix: bool = True, log_info: bool = True
-    ) -> list[int]:
+    ) -> tuple:
         model = get_cnn_model(self.params).to(self.device)
         model.train(mode=False)
         criterion = self.__get_criterion()
@@ -304,6 +304,9 @@ class Pipeline:
         # Initialize containers for labels and predictions
         all_labels = []
         all_predictions = []
+
+        import time
+        init_time = time.time()
 
         with torch.no_grad():  # Disable gradient computation for testing
             for step, (images, labels) in enumerate(
@@ -332,12 +335,13 @@ class Pipeline:
                     predicted.view(-1).cpu().numpy().astype(int).tolist()
                 )
 
-                if step % 10 == 0 and log_info:
+                """if step % 10 == 0 and log_info:
                     logging.info(
                         f"Test Step [{step + 1}/{len(self.test_data_loader)}], "
                         f"Loss: {total_loss / (step + 1):.4f}, "
                         f"Accuracy: {100 * correct_predictions / total_samples:.2f}%"
-                    )
+                    )"""
+        print(f"Time: {time.time() - init_time}")
 
         final_loss = total_loss / len(self.test_data_loader)
         final_accuracy = 100 * correct_predictions / total_samples
@@ -361,15 +365,7 @@ class Pipeline:
 
     def __get_scheduler(self, optimizer: optim.Optimizer) -> LambdaLR:
         def lr_lambda(step: int) -> float:
-            epoch_fraction = self.current_epoch / self.params.cnn_epochs
             return 1.0
-
-            if epoch_fraction < 0.15:
-                return 0.3 + 0.7 * (epoch_fraction / 0.15)
-            elif epoch_fraction < 0.5:
-                return 1.0
-            else:
-                return 0.5 * (1 + np.cos(np.pi * (epoch_fraction - 0.5) / 0.5))
 
         return LambdaLR(optimizer, lr_lambda=lr_lambda)
 
