@@ -418,10 +418,10 @@ class Pipeline:
                 images, labels = images.to(self.device), labels.to(self.device)
 
                 outputs = model(images)
-                loss = criterion(
-                    outputs, labels.unsqueeze(1).float()
-                )  # Ensure labels match shape
-
+                if self.params.num_labels == 2:
+                    loss = criterion(outputs, labels.unsqueeze(1).float())
+                else:
+                    loss = criterion(outputs, labels)
                 running_loss += loss.item()
 
                 predicted = (

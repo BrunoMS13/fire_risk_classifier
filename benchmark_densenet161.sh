@@ -30,16 +30,16 @@ NUM_CLASSES=3
 mkdir -p ~/models
 
 # Define learning rates to test
-LEARNING_RATES=("1e-4")  # Keeping only two learning rates
+LEARNING_RATES=("1e-4" "1e-5")  # Keeping only two learning rates
 
 # Define weight decay values to test
-WEIGHT_DECAYS=("1e-4")  # Removed 1e-6
+WEIGHT_DECAYS=("1e-4" "1e-2")  # Removed 1e-6
 
 # Define unfreezing strategies (kept only "Gradual")
-UNFREEZE_OPTIONS=("None")
+UNFREEZE_OPTIONS=("Gradual")
 
 # Logging file (add INSTANCE_ID to log for different shells)
-INSTANCE_ID=${INSTANCE_ID:-"instance_2"}  # Default to "instance_1" if not set
+INSTANCE_ID=${INSTANCE_ID:-"instance"}  # Default to "instance_1" if not set
 LOG_FILE=~/models/training_results_${INSTANCE_ID}.log
 echo "Experiment Results - $(date)" > $LOG_FILE
 
@@ -47,7 +47,7 @@ echo "Experiment Results - $(date)" > $LOG_FILE
 MODELS=("densenet161")
 
 # Number of runs per configuration
-NUM_RUNS=1
+NUM_RUNS=2
 
 # Define datasets
 DATASETS=(
@@ -72,7 +72,7 @@ for model in "${MODELS[@]}"; do
                         echo "Training $model on $DATASET_NAME with lr=$lr, wd=$wd, unfreeze=$unfreeze (Run $run) $NDVI_FLAG"
 
                         docker run --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train \
-                            --algorithm $model --batch_size 8 --train True --num_epochs 1 --num_classes $NUM_CLASSES \
+                            --algorithm $model --batch_size 8 --train True --num_epochs 21 --num_classes $NUM_CLASSES \
                             --images_dir $IMAGE_DIR --wd $wd --lr $lr --unfreeze $unfreeze --save_as $EXP_NAME $NDVI_FLAG
 
                         echo "Copying Results for $EXP_NAME..."
