@@ -8,20 +8,29 @@ from fire_risk_classifier.utils.logger import Logger
 from fire_risk_classifier.dataclasses.params import Params
 
 irg_model_names = [
+
+    "best_models/resnet50_IRG.pth"
+]
+"""[
     "best_models/densenet161_IRG.pth",
     "best_models/efficientnetB5_IRG.pth",
     "best_models/resnet50_IRG.pth",
-] 
+] """
 rgb_model_names = [
+]
+"""[
     "best_models/densenet161_RGB.pth",
     "best_models/efficientnetB5_RGB.pth",
     "best_models/resnet50_RGB.pth",
-]
+]"""
 rgb_ndvi_model_names = [
+    "best_models/resnet50_RGB_NDVI.pth"
+]
+"""[
     "best_models/densenet161_RGB_NDVI.pth",
     "best_models/efficientnetB5_RGB_NDVI.pth",
     "best_models/resnet50_RGB_NDVI.pth",
-]
+]"""
 
 
 

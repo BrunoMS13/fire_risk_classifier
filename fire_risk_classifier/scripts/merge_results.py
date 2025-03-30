@@ -73,7 +73,7 @@ def compute_metrics(y_true, y_pred):
     f1 = f1_score(y_true, y_pred, average="weighted")
     return accuracy, f1
 
-def plot_confusion_matrix(y_true, y_pred, normalize=True):
+def plot_confusion_matrix(y_true, y_pred, normalize=False):
     """Plots and saves confusion matrix for the ensemble model with optional normalization."""
     cm = confusion_matrix(y_true, y_pred)
     
@@ -83,7 +83,7 @@ def plot_confusion_matrix(y_true, y_pred, normalize=True):
     plt.figure(figsize=(6,5))
     
     # Define custom labels
-    class_labels = ["Average Risk", "Very High Risk"]
+    class_labels = ["Vegetation Managed", "Vegetation Not Managed"]
     
     sns.heatmap(cm, annot=True, fmt=".2f" if normalize else "d", cmap="Blues", xticklabels=class_labels, yticklabels=class_labels)
     plt.xlabel("Predicted Label")

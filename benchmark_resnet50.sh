@@ -46,7 +46,7 @@ echo "Experiment Results - $(date)" > $LOG_FILE
 MODELS=("resnet50")
 
 # Number of runs per configuration
-NUM_RUNS=2
+NUM_RUNS=1
 
 # Define datasets
 DATASETS=(
