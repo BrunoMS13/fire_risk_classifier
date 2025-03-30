@@ -26,7 +26,7 @@ docker build -t fire_risk_classifier_image .
 WEIGHTS_PATH="/tmp/fire_risk_classifier/fire_risk_classifier/data/cnn_checkpoint_weights"
 DOCKER_WEIGHTS_PATH="/app/fire_risk_classifier/data/cnn_checkpoint_weights"
 IMAGE_BASE_DIR="fire_risk_classifier/data/images"
-NUM_CLASSES=2
+NUM_CLASSES=3
 mkdir -p ~/models
 
 # Define learning rates to test
@@ -44,7 +44,7 @@ LOG_FILE=~/models/training_results_${INSTANCE_ID}.log
 echo "Experiment Results - $(date)" > $LOG_FILE
 
 # Model architectures to train
-MODELS=("resnet50")
+MODELS=("densenet161")
 
 # Number of runs per configuration
 NUM_RUNS=1
@@ -72,7 +72,7 @@ for model in "${MODELS[@]}"; do
                         echo "Training $model on $DATASET_NAME with lr=$lr, wd=$wd, unfreeze=$unfreeze (Run $run) $NDVI_FLAG"
 
                         docker run --rm --gpus all -v "$WEIGHTS_PATH:$DOCKER_WEIGHTS_PATH" fire_risk_classifier_image poetry run train \
-                            --algorithm $model --batch_size 16 --train True --num_epochs 1 --num_classes $NUM_CLASSES \
+                            --algorithm $model --batch_size 8 --train True --num_epochs 1 --num_classes $NUM_CLASSES \
                             --images_dir $IMAGE_DIR --wd $wd --lr $lr --unfreeze $unfreeze --save_as $EXP_NAME $NDVI_FLAG
 
                         echo "Copying Results for $EXP_NAME..."

@@ -251,7 +251,10 @@ class Pipeline:
             optimizer.zero_grad()
 
             outputs = model(images)
-            loss = criterion(outputs, labels.unsqueeze(1).float())
+            if self.params.num_labels == 2:
+                loss = criterion(outputs, labels.unsqueeze(1).float())
+            else:
+                loss = criterion(outputs, labels)
 
             loss.backward()
             optimizer.step()

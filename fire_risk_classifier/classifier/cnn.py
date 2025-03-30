@@ -214,7 +214,8 @@ class Classifier(nn.Module):
         self.relu2 = nn.ReLU()
         self.dropout2 = nn.Dropout(0.4)
 
-        self.fc3 = nn.Linear(hidden_size, 1)
+        n_classes = num_classes if num_classes > 2 else 1
+        self.fc3 = nn.Linear(hidden_size, n_classes)
 
     def forward(self, x):
         # Forward pass through layers
