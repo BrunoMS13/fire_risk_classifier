@@ -17,6 +17,7 @@ class CustomImageDataset(Dataset):
         annotations_file: str,
         transform=transforms.ToTensor(),
         ndvi_index: bool = False,
+        rgbi: bool = False,
     ):
         self.img_labels = pd.read_csv(annotations_file)
         self.img_labels_dict = {row[0]: row[1] for row in self.img_labels.itertuples(index=False)}
@@ -25,11 +26,15 @@ class CustomImageDataset(Dataset):
         self.img_dir = img_dir
         self.transform = transform
         self.ndvi_index = ndvi_index
+        self.rgbi = rgbi
         self.normalize_transform = self.__get_normalize_transform()
 
         self.classes = list(classes)
         self.class2idx = {self.classes[i]: i for i in range(len(self.classes))}
         self.idx2class = {i: self.classes[i] for i in range(len(self.classes))}
+
+        if self.rgbi and self.ndvi_index:
+            raise ValueError("Cannot use both ndvi_index and rgbi at the same time.")   
 
     def __len__(self):
         return len(self.img_labels)
@@ -46,6 +51,13 @@ class CustomImageDataset(Dataset):
 
         if self.ndvi_index:
             main_image = self.__add_ndvi_as_fourth_channel(main_image, img_name)
+
+        if self.rgbi:
+            # Add IRG channel as the 4th channel
+            irg_path = os.path.join(IRG_IMG_PATH, img_name)
+            irg_image = Image.open(irg_path).convert("RGB")
+            irg_image = self.transform(irg_image)
+            main_image = torch.cat((main_image, irg_image[0:1, :, :]), dim=0)
 
         # Compute data normalization
         main_image = self.normalize_transform(main_image)
@@ -88,6 +100,9 @@ class CustomImageDataset(Dataset):
             if self.ndvi_index:
                 dataset_mean = dataset_mean + NDVI_DATA["mean"]
                 dataset_std = dataset_std + NDVI_DATA["std"]
+            if self.rgbi:
+                dataset_mean = dataset_mean + [IRG_DATA["mean"][0]]
+                dataset_std = dataset_std + [IRG_DATA["std"][0]]
         elif "IRG" in self.img_dir:
             dataset_mean = IRG_DATA["mean"]
             dataset_std = IRG_DATA["std"]

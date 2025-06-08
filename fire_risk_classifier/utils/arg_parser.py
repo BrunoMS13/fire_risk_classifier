@@ -15,19 +15,21 @@ class ArgumentParser:
 
     def __add_arguments(self):
         self.parser.add_argument("--algorithm", default="", type=str)
-        self.parser.add_argument("--train", default=False, type=bool)
-        self.parser.add_argument("--test", default=False, type=bool)
+        self.parser.add_argument("--train", action="store_true")
+        self.parser.add_argument("--test", action="store_true")
         self.parser.add_argument("--num_epochs", default=12, type=int)
         self.parser.add_argument("--batch_size", default=8, type=int)
         self.parser.add_argument("--load_weights", default="", type=str)
-        self.parser.add_argument("--class_weights", default="", type=str)
-        self.parser.add_argument("--ndvi", default=False, type=bool)
+        self.parser.add_argument("--class_weights", action="store_true")
+        self.parser.add_argument("--ndvi", action="store_true")
         self.parser.add_argument("--images_dir", default="", type=str)
         self.parser.add_argument("--save_as", default="", type=str)
         self.parser.add_argument("--num_classes", default=2, type=int)
         self.parser.add_argument("--lr", default=1e-4, type=float)
         self.parser.add_argument("--wd", default=1e-4, type=float)
         self.parser.add_argument("--unfreeze", default="", type=str)
+        self.parser.add_argument("--rgbi", action="store_true")
+
 
     def get_parser_dict(self) -> dict[str, Any]:
         return vars(self.parser.parse_args())

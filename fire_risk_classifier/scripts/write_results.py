@@ -8,8 +8,8 @@ from fire_risk_classifier.utils.logger import Logger
 from fire_risk_classifier.dataclasses.params import Params
 
 irg_model_names = [
-
-    "best_models/resnet50_IRG.pth"
+    "models/densenet161_IRG_lr1e-4_wd1e-4_unfreezeGradual_run1_instance.pth"
+    #"best_models/resnet50_IRG.pth"
 ]
 """[
     "best_models/densenet161_IRG.pth",
@@ -17,6 +17,7 @@ irg_model_names = [
     "best_models/resnet50_IRG.pth",
 ] """
 rgb_model_names = [
+    "models/densenet161_RGB_lr1e-4_wd1e-4_unfreezeGradual_run1_instance.pth"
 ]
 """[
     "best_models/densenet161_RGB.pth",
@@ -24,7 +25,7 @@ rgb_model_names = [
     "best_models/resnet50_RGB.pth",
 ]"""
 rgb_ndvi_model_names = [
-    "best_models/resnet50_RGB_NDVI.pth"
+    "models/densenet161_RGB_NDVI_lr1e-5_wd1e-4_unfreezeGradual_run1_instance.pth"
 ]
 """[
     "best_models/densenet161_RGB_NDVI.pth",
@@ -33,8 +34,6 @@ rgb_ndvi_model_names = [
 ]"""
 
 
-
-NUM_CLASSES = 2
 CALCULATE_IRG = True
 CALCULATE_RGB = True
 CALCULATE_RGB_NDVI = True

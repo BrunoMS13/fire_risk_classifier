@@ -51,7 +51,7 @@ def get_resnet_model(params: Params) -> models.ResNet:
             base_model = models.resnet152(weights=models.ResNet152_Weights.DEFAULT)
     num_features = base_model.fc.in_features
 
-    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=False)
+    __adapt_model(params, base_model, freeze_layers=False)
 
     base_model.fc = get_classifier_model(params, num_features)
     return base_model
@@ -75,7 +75,7 @@ def get_densenet_model(params: Params) -> models.DenseNet:
             raise ValueError(f"Invalid algorithm: {algorithm}")
 
     num_features = base_model.classifier.in_features
-    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=False)
+    __adapt_model(params, base_model, freeze_layers=False)
 
     base_model.classifier = get_classifier_model(params, num_features)
     return base_model
@@ -105,7 +105,7 @@ def get_efficientnet_model(params: Params) -> models.EfficientNet:
             )
 
     num_features = base_model.classifier[1].in_features
-    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=False)
+    __adapt_model(params, base_model, freeze_layers=False)
 
     if isinstance(base_model.classifier, nn.Linear):
         base_model.classifier = get_classifier_model(params, num_features)
@@ -126,26 +126,33 @@ def get_vgg_model(params: Params) -> models.VGG:
             base_model = models.vgg19_bn(weights=models.VGG19_BN_Weights.DEFAULT)
 
     num_features = base_model.classifier[6].in_features
-    __adapt_model(params.calculate_ndvi_index, base_model, freeze_layers=False)
+    __adapt_model(params, base_model, freeze_layers=False)
 
     base_model.classifier[6] = get_classifier_model(params, num_features)
     return base_model
 
 
 def __adapt_model(
-    calculate_ndvi_index: bool, base_model: nn.Module, freeze_layers: bool = True
+    params: Params,
+    base_model: nn.Module,
+    freeze_layers: bool = True
 ):
-    if calculate_ndvi_index:
+    if params.calculate_ndvi_index:
         __adapt_model_to_ndvi(base_model)
+    elif params.calculate_rgbi:
+        __adapt_model_to_rgbi(base_model)
+
+    print(params.__dict__)
 
     for param in base_model.parameters():
         param.requires_grad = not freeze_layers
 
-    # Ensure BatchNorm layers are trainable
+    # Ensure BatchNorm layers are always trainable
     for module in base_model.modules():
         if isinstance(module, nn.BatchNorm2d):
             for param in module.parameters():
                 param.requires_grad = True
+
 
 
 def __adapt_model_to_ndvi(base_model: nn.Module):
@@ -163,7 +170,7 @@ def __adapt_model_to_ndvi(base_model: nn.Module):
         first_layer = base_model.features[0][0]  # EfficientNet's Conv2d is inside Conv2dNormActivation
 
     if first_layer is None:
-        raise ValueError("Unsupported model type for NDVI adaptation.")
+        raise ValueError("Unsupported model type for 4 channel adaptation.")
 
     # Check if bias is used
     bias = first_layer.bias is not None if hasattr(first_layer, "bias") else False
@@ -202,6 +209,53 @@ def __adapt_model_to_ndvi(base_model: nn.Module):
     return base_model
 
 
+def __adapt_model_to_rgbi(base_model: nn.Module):
+    """
+    Modify the first conv layer to accept 4 input channels (RGB + Infrared).
+    """
+    first_layer = None
+
+    if isinstance(base_model, models.ResNet):
+        first_layer = base_model.conv1
+    elif isinstance(base_model, models.DenseNet):
+        first_layer = base_model.features.conv0
+    elif isinstance(base_model, models.EfficientNet):
+        first_layer = base_model.features[0][0]
+    else:
+        raise ValueError("Unsupported model type for RGBI adaptation.")
+
+    bias = first_layer.bias is not None if hasattr(first_layer, "bias") else False
+
+    new_conv = nn.Conv2d(
+        in_channels=4,
+        out_channels=first_layer.out_channels,
+        kernel_size=first_layer.kernel_size,
+        stride=first_layer.stride,
+        padding=first_layer.padding,
+        bias=bias,
+    )
+
+    with torch.no_grad():
+        # Copy original weights
+        new_conv.weight[:, :3, :, :] = first_layer.weight[:, :3, :, :]
+
+        # Initialize IR weights
+        new_conv.weight[:, 3, :, :] = first_layer.weight[:, 0, :, :]  # Copy Red weights for IR init (or use zeros)
+
+    if bias:
+        new_conv.bias.data.copy_(first_layer.bias.data)
+
+    # Replace the original conv layer
+    if isinstance(base_model, models.ResNet):
+        base_model.conv1 = new_conv
+    elif isinstance(base_model, models.DenseNet):
+        base_model.features.conv0 = new_conv
+    elif isinstance(base_model, models.EfficientNet):
+        base_model.features[0][0] = new_conv
+
+    return base_model
+
+
 class Classifier(nn.Module):
     def __init__(self, input_size: int, hidden_size: int, num_classes: int):
         super(Classifier, self).__init__()
@@ -214,7 +268,7 @@ class Classifier(nn.Module):
         self.relu2 = nn.ReLU()
         self.dropout2 = nn.Dropout(0.4)
 
-        n_classes = num_classes if num_classes > 2 else 1
+        n_classes = 1 if num_classes == 2 else num_classes
         self.fc3 = nn.Linear(hidden_size, n_classes)
 
     def forward(self, x):

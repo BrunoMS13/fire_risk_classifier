@@ -57,6 +57,7 @@ def main():
     parser = ArgumentParser()
 
     Logger.initialize_logger()
+    print(parser.get_parser_dict())
 
     pipeline = Pipeline(default_params, parser.get_parser_dict())
 

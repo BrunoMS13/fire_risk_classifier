@@ -54,6 +54,7 @@ DATASETS=(
     "RGB fire_risk_classifier/data/images/ortos2018-RGB-62_5m-decompressed"
     "IRG fire_risk_classifier/data/images/ortos2018-IRG-62_5m-decompressed"
     "RGB_NDVI fire_risk_classifier/data/images/ortos2018-RGB-62_5m-decompressed --ndvi True"
+    "RGBI fire_risk_classifier/data/images/ortos2018-RGB-62_5m-decompressed --rgbi True"
 )
 
 

@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import transforms
 from torch.utils.data import DataLoader
+from torch.utils.data import random_split
 from torch.optim.lr_scheduler import LambdaLR
 
 import seaborn as sns
@@ -40,6 +41,8 @@ class Pipeline:
             self.params.algorithm = args.get("algorithm")
         if args.get("ndvi"):
             self.params.calculate_ndvi_index = True
+        if args.get("rgbi"):
+            self.params.calculate_rgbi = True
         if args.get("load_weights"):
             self.params.model_weights = args.get("load_weights")
         if args.get("num_epochs"):
@@ -108,11 +111,14 @@ class Pipeline:
             directories["annotations_file"],
             transform=transform,
             ndvi_index=self.params.calculate_ndvi_index,
+            rgbi=self.params.calculate_rgbi,
         )
         train_size = int(0.8 * len(self.dataset))
         val_size = len(self.dataset) - train_size
-        train_dataset, val_dataset = torch.utils.data.random_split(
-            self.dataset, [train_size, val_size]
+        generator = torch.Generator().manual_seed(42)
+
+        train_dataset, val_dataset = random_split(
+            self.dataset, [train_size, val_size], generator=generator
         )
 
         self.data_loader = DataLoader(
@@ -128,6 +134,7 @@ class Pipeline:
             directories["images_directory"],
             directories["testing_annotations_file"],
             ndvi_index=self.params.calculate_ndvi_index,
+            rgbi=self.params.calculate_rgbi,
         )
         self.test_data_loader = DataLoader(
             self.test_dataset, batch_size=batch_size, shuffle=False
@@ -262,7 +269,6 @@ class Pipeline:
 
             running_loss += loss.item()
 
-
             with torch.no_grad():
                 if self.params.num_labels > 2:
                     predicted = torch.argmax(outputs, dim=1)
@@ -318,7 +324,10 @@ class Pipeline:
                 images, labels = images.to(self.device), labels.to(self.device)
 
                 outputs = model(images)
-                loss = criterion(outputs, labels.unsqueeze(1).float())
+                if self.params.num_labels == 2:
+                    loss = criterion(outputs, labels.unsqueeze(1).float())
+                else:
+                    loss = criterion(outputs, labels)
                 total_loss += loss.item()
 
                 if self.params.num_labels > 2:
@@ -374,7 +383,7 @@ class Pipeline:
 
     def __get_criterion(self) -> nn.Module:
         if self.params.class_weights:
-            class_weights = self.dataset.get_class_weights_tensor().to(self.device)
+            class_weights = self.test_dataset.get_class_weights_tensor().to(self.device)
             logging.info(f"Using class weights: {class_weights}")
 
             if self.params.num_labels > 2:

@@ -14,7 +14,7 @@ class Params:
         self.batch_size_lstm = 512
         self.batch_size_eval = 128
         self.metadata_length = 45
-        self.num_labels = 3
+        self.num_labels = 2
         self.cnn_last_layer_length = 4096
         self.cnn_lstm_layer_length = 2208
 
@@ -34,7 +34,7 @@ class Params:
         self.prefix = ""
         self.model_weights = ""
         self.database = ""
-        self.class_weights = True
+        self.class_weights = False
         self.generator = "flip"
 
         self.fine_tunning = False
@@ -52,14 +52,15 @@ class Params:
         self.lstm_epochs = 100
         self.lstm_loss = "categorical_crossentropy"
         self.calculate_ndvi_index = False
+        self.calculate_rgbi = False
 
         self.directories = {
-            "annotations_file": "fire_risk_classifier/data/csvs/train_3classes.csv",
-            "testing_annotations_file": "fire_risk_classifier/data/csvs/test_3classes.csv",
+            "annotations_file": "fire_risk_classifier/data/csvs/train_2classes.csv",
+            "testing_annotations_file": "fire_risk_classifier/data/csvs/test_2classes.csv",
             "cnn_checkpoint_weights": "fire_risk_classifier/data/cnn_checkpoint_weights/",
             "images_directory": "fire_risk_classifier/data/images/ortos2018-RGB-62_5m-decompressed",
         }
         self.save_as = ""
 
         # self.class_names = ["low", "medium", "high", "very_high", "extreme"]
-        self.class_names = ["medium", "extreme"]
+        self.class_names = ["managed", "not-managed"]

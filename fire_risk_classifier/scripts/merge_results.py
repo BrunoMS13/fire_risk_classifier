@@ -8,7 +8,7 @@ from collections import Counter
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 
 # Directory where result files are stored
-RESULTS_DIR = "./results"  # Change this if needed
+RESULTS_DIR = "./results_3classes"  # Change this if needed
 FINAL_RESULTS_FILE = "final_results.txt"
 
 def load_results():
@@ -83,7 +83,7 @@ def plot_confusion_matrix(y_true, y_pred, normalize=False):
     plt.figure(figsize=(6,5))
     
     # Define custom labels
-    class_labels = ["Vegetation Managed", "Vegetation Not Managed"]
+    class_labels = ["Low-Medium", "High", "Very High-Extreme"]
     
     sns.heatmap(cm, annot=True, fmt=".2f" if normalize else "d", cmap="Blues", xticklabels=class_labels, yticklabels=class_labels)
     plt.xlabel("Predicted Label")
@@ -116,7 +116,7 @@ def main():
     y_true, y_ensemble, confidences = majority_voting(model_results)
     accuracy, f1 = compute_metrics(y_true, y_ensemble)
 
-    plot_confusion_matrix(y_true, y_ensemble, False)
+    plot_confusion_matrix(y_true, y_ensemble, True)
     save_final_results(y_true, y_ensemble, confidences, accuracy, f1)
 
     # Print final metrics
